@@ -109,8 +109,11 @@ void OrderTab::updateReportTemplateTable ()
 
 void OrderTab::on_tableAgenda_doubleClicked(const QModelIndex &index)
 {
+  if (ui->tableAgenda->selectionModel()->selectedRows().count() == 1)
+  {
     int top_id = ui->tableAgenda->model()->index(index.row(),0).data().toInt();
     changeAgendaItemSettings (top_id);
+  }
 }
 
 void OrderTab::changeAgendaItemSettings (int aId)
@@ -200,4 +203,24 @@ void OrderTab::on_tableReportTemplate_doubleClicked(const QModelIndex &index)
           //updateReportTemplateTable();
       }
   }
+}
+
+void OrderTab::on_editButton_clicked()
+{
+  if (0 != ui->tableAgenda->selectionModel())
+  {
+    if (ui->tableAgenda->selectionModel()->selectedRows().count() == 1)
+    {
+      int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
+      int id = ui->tableAgenda->model()->index(selectedRow,0).data().toInt();
+
+      changeAgendaItemSettings(id);
+    }
+    else
+    {
+      QMessageBox::information(this, "Fehler", "Es wurde kein Eintrag ausgewählt.");
+    }
+  }
+  else
+      QMessageBox::information(this, "Fehler", "Interner Fehler");
 }

@@ -25,8 +25,8 @@ signals:
 
 private slots:
     void on_tableAgenda_doubleClicked(const QModelIndex &index);
-
     void on_tableReportTemplate_doubleClicked(const QModelIndex &index);
+    void on_editButton_clicked();
 
 private:
     //void initReportPattern ();
