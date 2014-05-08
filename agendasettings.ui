@@ -122,6 +122,12 @@
         <pointsize>10</pointsize>
        </font>
       </property>
+      <property name="displayFormat">
+       <string>dd.MM</string>
+      </property>
+      <property name="calendarPopup">
+       <bool>true</bool>
+      </property>
      </widget>
     </item>
     <item row="5" column="0">

@@ -7,6 +7,8 @@ namespace Ui {
 class AgendaSettings;
 }
 
+class QAbstractButton;
+
 class AgendaSettings : public QDialog
 {
     Q_OBJECT
@@ -26,6 +28,9 @@ public:
     void disableYearSetting (bool aDisable);
     void disableEtvNumSetting (bool aDisable);
     ~AgendaSettings();
+
+private slots:
+    void on_year_valueChanged(int arg1);
 
 private:
     Ui::AgendaSettings *ui;
