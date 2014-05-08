@@ -78,7 +78,10 @@ void AgendaSettings::disableEtvNumSetting (bool aDisable)
 
 void AgendaSettings::on_year_valueChanged(int arg1)
 {
-  QDate aDate;
-  aDate.setDate(arg1, 1, 1);
-  setEtvDate(aDate);
+  if (getEtvDate().year() != arg1)
+  {
+    QDate aDate;
+    aDate.setDate(arg1, 1, 1);
+    setEtvDate(aDate);
+  }
 }
