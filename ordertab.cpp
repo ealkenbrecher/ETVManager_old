@@ -118,46 +118,50 @@ void OrderTab::on_tableAgenda_doubleClicked(const QModelIndex &index)
 
 void OrderTab::changeAgendaItemSettings (int aId)
 {
-    OrderItemSettings itemSettings (this);
-    QSqlDatabase* db = Database::getInstance()->getDatabase();
-    if (0 != db)
+  int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
+  OrderItemSettings itemSettings (this);
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+  if (0 != db)
+  {
+    QSqlQuery query (*db);
+    query.prepare("SELECT LeerzeilenProtokoll FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :top_id");
+    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+    query.bindValue(":year", Database::getInstance()->getCurrentYear());
+    query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+    query.bindValue(":top_id", aId);
+    query.exec();
+
+    while (query.next())
     {
-      QSqlQuery query (*db);
-      query.prepare("SELECT LeerzeilenProtokoll FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :top_id");
+      itemSettings.setValue(query.value(0).toInt());
+    }
+  }
+
+  //abort -> do not save settings
+  if (itemSettings.exec() != QDialog::Accepted)
+  {
+    return;
+  }
+  else
+  {
+    if (Database::getInstance()->dbIsOk())
+    {
+      QSqlQuery query (*Database::getInstance()->getDatabase());
+      //set values
+      query.prepare("UPDATE Tagesordnungspunkte SET LeerzeilenProtokoll =:lines WHERE obj_id = :id AND wi_jahr = :year AND top_id = :topid AND etv_nr = :etvnum");
       query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
       query.bindValue(":year", Database::getInstance()->getCurrentYear());
-      query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-      query.bindValue(":top_id", aId);
+      query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":topid", aId);
+      query.bindValue(":lines", itemSettings.getValue());
       query.exec();
 
-      while (query.next())
-      {
-        itemSettings.setValue(query.value(0).toInt());
-      }
+      updateAgendaTable();
+      ui->tableAgenda->setFocus();
+      ui->tableAgenda->selectRow(selectedRow);
     }
-
-    //abort -> do not save settings
-    if (itemSettings.exec() != QDialog::Accepted)
-    {
-        return;
-    }
-    else
-    {
-        if (Database::getInstance()->dbIsOk())
-        {
-            QSqlQuery query (*Database::getInstance()->getDatabase());
-            //set values
-            query.prepare("UPDATE Tagesordnungspunkte SET LeerzeilenProtokoll =:lines WHERE obj_id = :id AND wi_jahr = :year AND top_id = :topid AND etv_nr = :etvnum");
-            query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-            query.bindValue(":year", Database::getInstance()->getCurrentYear());
-            query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
-            query.bindValue(":topid", aId);
-            query.bindValue(":lines", itemSettings.getValue());
-            query.exec();
-
-            updateAgendaTable();
-        }
-    }
+  }
 }
 
 void OrderTab::on_tableReportTemplate_doubleClicked(const QModelIndex &index)

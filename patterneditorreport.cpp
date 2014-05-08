@@ -80,37 +80,40 @@ void patternEditorReport::on_tablePatterns_doubleClicked(const QModelIndex &inde
 
 void patternEditorReport::changePatternItemSettings (int aId)
 {
-    PatternEditorReportItemSettings itemSettings (this);
+  int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
+  PatternEditorReportItemSettings itemSettings (this);
 
-    QSqlQuery query (*Database::getInstance()->getDatabase());
-    query.prepare("SELECT ueberschrift, deckblatt FROM ReportPatterns WHERE id = :id");
+  QSqlQuery query (*Database::getInstance()->getDatabase());
+  query.prepare("SELECT ueberschrift, deckblatt FROM ReportPatterns WHERE id = :id");
 
-    query.bindValue(":id", aId);
-    query.exec();
+  query.bindValue(":id", aId);
+  query.exec();
 
-    while (query.next())
+  while (query.next())
+  {
+    itemSettings.setPatternName(query.value(0).toString());
+    itemSettings.setBodyText(query.value(1).toString());
+  }
+
+  //abort -> do not save settings
+  if (itemSettings.exec() != QDialog::Accepted)
+  {
+    return;
+  }
+  else
+  {
+    if (Database::getInstance()->dbIsOk())
     {
-      itemSettings.setPatternName(query.value(0).toString());
-      itemSettings.setBodyText(query.value(1).toString());
-    }
+      QSqlQuery query (*Database::getInstance()->getDatabase());
+      //set values
+      query.prepare("UPDATE ReportPatterns SET deckblatt =:newBodyText WHERE id = :id");
+      query.bindValue(":id", aId);
+      query.bindValue(":newBodyText", itemSettings.getBodyText());
+      query.exec();
 
-    //abort -> do not save settings
-    if (itemSettings.exec() != QDialog::Accepted)
-    {
-        return;
+      updatePatternTable();
+      ui->tablePatterns->setFocus();
+      ui->tablePatterns->selectRow(selectedRow);
     }
-    else
-    {
-        if (Database::getInstance()->dbIsOk())
-        {
-            QSqlQuery query (*Database::getInstance()->getDatabase());
-            //set values
-            query.prepare("UPDATE ReportPatterns SET deckblatt =:newBodyText WHERE id = :id");
-            query.bindValue(":id", aId);
-            query.bindValue(":newBodyText", itemSettings.getBodyText());
-            query.exec();
-
-            updatePatternTable();
-        }
-    }
+  }
 }

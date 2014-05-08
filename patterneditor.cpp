@@ -54,81 +54,86 @@ void PatternEditor::on_editEntry_clicked()
   if (0 != ui->tablePatterns->selectionModel())
   {
     //check if selection in tableview is valid
-    if (ui->tablePatterns->selectionModel()->selectedRows().count() == 1)
+    if (1 == ui->tablePatterns->selectionModel()->selection().indexes().count())
     {
         int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
         int patternId = ui->tablePatterns->model()->index(selectedRow,0).data().toInt();
 
         changePatternItemSettings(patternId);
     }
-    else if (ui->tablePatterns->selectionModel()->selection().indexes().count() > 1)
-        QMessageBox::information(this, "Fehler", "Bitte nur eine Zeile auswählen.");
-    else if (ui->tablePatterns->selectionModel()->selection().indexes().count() == 0)
-        QMessageBox::information(this, "Fehler", "Bitte eine Zeile auswählen.");
+    else
+    {
+      QMessageBox::information(this, "Fehler", "Bitte eine Zeile auswählen.");
+    }
   }
   else
       QMessageBox::information(this, "Fehler", "Interner Fehler");
-
 }
 
 
 void PatternEditor::on_tablePatterns_doubleClicked(const QModelIndex &index)
 {
-  if (ui->tablePatterns->selectionModel()->selectedRows().count() == 1)
+  if (1 == ui->tablePatterns->selectionModel()->selection().indexes().count())
   {
     int top_id = ui->tablePatterns->model()->index(index.row(),0).data().toInt();
     changePatternItemSettings(top_id);
   }
+  else
+    QMessageBox::information(this, "Fehler", "Bitte eine Zeile auswählen.");
 }
 
 void PatternEditor::changePatternItemSettings (int aId)
 {
-    PatternItemSettings itemSettings (this);
+  int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
 
-    QSqlQuery query (*Database::getInstance()->getDatabase());
-    query.prepare("SELECT bezeichnung, ueberschrift, beschreibung, beschlussvorschlag, beschlussvorschlag2, beschlussvorschlag3, LeerzeilenProtokoll, beschlussArt FROM AgendaPatterns WHERE id = :id");
+  PatternItemSettings itemSettings (this);
 
-    query.bindValue(":id", aId);
-    query.exec();
+  QSqlQuery query (*Database::getInstance()->getDatabase());
+  query.prepare("SELECT bezeichnung, ueberschrift, beschreibung, beschlussvorschlag, beschlussvorschlag2, beschlussvorschlag3, LeerzeilenProtokoll, beschlussArt FROM AgendaPatterns WHERE id = :id");
 
-    while (query.next())
+  query.bindValue(":id", aId);
+  query.exec();
+
+  if (query.next())
+  {
+    itemSettings.setPatternName (query.value(0).toString());
+    itemSettings.setHeader(query.value(1).toString());
+    itemSettings.setDescription(query.value(2).toString());
+    itemSettings.setSuggestion(query.value(3).toString());
+    itemSettings.setSuggestion2(query.value(4).toString());
+    itemSettings.setSuggestion3(query.value(5).toString());
+    itemSettings.setNumberOfLines(query.value(6).toInt());
+    itemSettings.setType(query.value(7).toInt());
+  }
+
+  //abort -> do not save settings
+  if (itemSettings.exec() != QDialog::Accepted)
+  {
+      return;
+  }
+  else
+  {
+    if (Database::getInstance()->dbIsOk())
     {
-      itemSettings.setPatternName (query.value(0).toString());
-      itemSettings.setHeader(query.value(1).toString());
-      itemSettings.setDescription(query.value(2).toString());
-      itemSettings.setSuggestion(query.value(3).toString());
-      itemSettings.setSuggestion2(query.value(4).toString());
-      itemSettings.setSuggestion3(query.value(5).toString());
-      itemSettings.setNumberOfLines(query.value(6).toInt());
-      itemSettings.setType(query.value(7).toInt());
-    }
+        QSqlQuery query (*Database::getInstance()->getDatabase());
+        //set values
+        query.prepare("UPDATE AgendaPatterns SET bezeichnung = :patternName, ueberschrift =:header, beschreibung =:descr, beschlussvorschlag =:suggestion, beschlussvorschlag2 =:suggestion2, beschlussvorschlag3 =:suggestion3, LeerzeilenProtokoll =:numberOfLines, beschlussArt =:type WHERE id = :id");
+        query.bindValue(":id", aId);
+        query.bindValue(":header", itemSettings.getHeader());
+        query.bindValue(":patternName", itemSettings.getPatternName());
+        query.bindValue(":descr", itemSettings.getDescription());
+        query.bindValue(":suggestion", itemSettings.getSuggestion());
+        query.bindValue(":suggestion2", itemSettings.getSuggestion2());
+        query.bindValue(":suggestion3", itemSettings.getSuggestion3());
+        query.bindValue(":numberOfLines", itemSettings.getNumberOfLines());
+        query.bindValue(":type", itemSettings.getType());
+        query.exec();
 
-    //abort -> do not save settings
-    if (itemSettings.exec() != QDialog::Accepted)
-    {
-        return;
+        updatePatternTable();
+        ui->tablePatterns->selectRow(selectedRow);
+        ui->tablePatterns->setFocus();
     }
-    else
-    {
-        if (Database::getInstance()->dbIsOk())
-        {
-            QSqlQuery query (*Database::getInstance()->getDatabase());
-            //set values
-            query.prepare("UPDATE AgendaPatterns SET bezeichnung = :patternName, ueberschrift =:header, beschreibung =:descr, beschlussvorschlag =:suggestion, beschlussvorschlag2 =:suggestion2, beschlussvorschlag3 =:suggestion3, LeerzeilenProtokoll =:numberOfLines, beschlussArt =:type WHERE id = :id");
-            query.bindValue(":id", aId);
-            query.bindValue(":header", itemSettings.getHeader());
-            query.bindValue(":patternName", itemSettings.getPatternName());
-            query.bindValue(":descr", itemSettings.getDescription());
-            query.bindValue(":suggestion", itemSettings.getSuggestion());
-            query.bindValue(":suggestion2", itemSettings.getSuggestion2());
-            query.bindValue(":suggestion3", itemSettings.getSuggestion3());
-            query.bindValue(":numberOfLines", itemSettings.getNumberOfLines());
-            query.bindValue(":type", itemSettings.getType());
-            query.exec();
-
-            updatePatternTable();
-        }
-    }
+  }
 }
 
 void PatternEditor::on_addEntry_clicked()
@@ -164,24 +169,22 @@ void PatternEditor::on_addEntry_clicked()
 
 void PatternEditor::on_deleteEntry_clicked()
 {
-  if (ui->tablePatterns->selectionModel()->selectedRows().count() == 1)
+  if (1 == ui->tablePatterns->selectionModel()->selection().indexes().count())
   {
-      QMessageBox::StandardButton reply = QMessageBox::question(this, "Achtung", "Vorlage wirklich löschen?", QMessageBox::Yes|QMessageBox::No);
-      if (reply == QMessageBox::Yes)
-      {
-          int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
-          int id = ui->tablePatterns->model()->index(selectedRow,0).data().toInt();
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "Achtung", "Vorlage wirklich löschen?", QMessageBox::Yes|QMessageBox::No);
+    if (reply == QMessageBox::Yes)
+    {
+      int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
+      int id = ui->tablePatterns->model()->index(selectedRow,0).data().toInt();
 
-          QSqlQuery query (*Database::getInstance()->getDatabase());
-          query.prepare("DELETE FROM AgendaPatterns WHERE id = :id");
-          query.bindValue(":id", id);
-          query.exec();
+      QSqlQuery query (*Database::getInstance()->getDatabase());
+      query.prepare("DELETE FROM AgendaPatterns WHERE id = :id");
+      query.bindValue(":id", id);
+      query.exec();
 
-          updatePatternTable();
-      }
+      updatePatternTable();
+    }
   }
-  else if (ui->tablePatterns->selectionModel()->selection().indexes().count() > 1)
-      QMessageBox::information(this, "Fehler", "Bitte nur eine Zeile auswählen.");
-  else if (ui->tablePatterns->selectionModel()->selection().indexes().count() == 0)
-      QMessageBox::information(this, "Fehler", "Bitte eine Zeile auswählen.");
+  else
+    QMessageBox::information(this, "Fehler", "Bitte eine Zeile auswählen.");
 }

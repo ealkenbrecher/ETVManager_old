@@ -82,6 +82,8 @@ void DecissionLibraryTab::on_tableAgenda_doubleClicked(const QModelIndex &index)
 
 void DecissionLibraryTab::changeAgendaItemSettings (int aId)
 {
+  int selection = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
+
   DecissionLibraryEditDialog editDlg (this);
 
   QSqlDatabase* db = Database::getInstance()->getDatabase();
@@ -123,6 +125,8 @@ void DecissionLibraryTab::changeAgendaItemSettings (int aId)
       query.exec();
 
       updateAgendaTable();
+      ui->tableAgenda->setFocus();
+      ui->tableAgenda->selectRow(selection);
     }
   }
 }

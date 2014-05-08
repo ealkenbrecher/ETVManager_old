@@ -121,6 +121,8 @@ void ReportGeneratorTab::on_tableAgenda_doubleClicked(const QModelIndex &index)
 
 void ReportGeneratorTab::changeAgendaItemSettings (int aId)
 {
+  int selection = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
+
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
@@ -174,6 +176,8 @@ void ReportGeneratorTab::changeAgendaItemSettings (int aId)
         query.exec();
 
         updateAgendaTable();
+        ui->tableAgenda->setFocus();
+        ui->tableAgenda->selectRow(selection);
       }
     }
   }
@@ -941,6 +945,7 @@ void ReportGeneratorTab::on_deleteEntry_clicked()
         }
 
         updateAgendaTable();
+        ui->tableAgenda->selectRow(selectedRow);
     }
   }
   else
