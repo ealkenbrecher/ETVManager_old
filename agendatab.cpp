@@ -202,32 +202,33 @@ void AgendaTab::on_deleteEntry_clicked()
         query.bindValue(":topid", top_id);
         query.exec();
 
-        //update top ids
-        query.prepare("SELECT top_id FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id > :topid");
-        query.bindValue(":topid", top_id);
-        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-        query.bindValue(":year", Database::getInstance()->getCurrentYear());
-        query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-        query.exec();
+        bool next = true;
 
-        int old_Id = 0;
-        int new_Id = 0;
-        while (query.next ())
+        while (true == next)
         {
-            old_Id = query.value(0).toInt();
-            new_Id = old_Id - 1;
+          top_id++;
 
+          //check, if there is a top_id with a higher id
+          query.prepare("SELECT top_id FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :topid");
+          query.bindValue(":topid", top_id);
+          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+          query.bindValue(":year", Database::getInstance()->getCurrentYear());
+          query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+          query.exec();
+
+          //higher id available -> set new id
+          if (query.next ())
+          {
             query.prepare("UPDATE Tagesordnungspunkte SET top_id = :newid WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :oldid");
             query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
             query.bindValue(":year", Database::getInstance()->getCurrentYear());
             query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-            query.bindValue(":oldid", old_Id);
-            query.bindValue(":newid", new_Id);
+            query.bindValue(":oldid", top_id);
+            query.bindValue(":newid", top_id - 1);
             query.exec();
-
-            query.prepare("SELECT top_id FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id > :topid");
-            query.bindValue(":topid", new_Id);
-            query.exec();
+          }
+          else
+            next = false;
         }
 
         updateAgendaTable();
