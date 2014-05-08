@@ -115,7 +115,8 @@ void ReportGeneratorTab::on_tableAgenda_doubleClicked(const QModelIndex &index)
     int top_id = ui->tableAgenda->model()->index(index.row(),0).data().toInt();
     changeAgendaItemSettings (top_id);
   }
-  QMessageBox::information(this, "Fehler", "Es wurde kein Eintrag ausgewählt.");
+  else
+    QMessageBox::information(this, "Fehler", "Es wurde kein Eintrag ausgewählt.");
 }
 
 void ReportGeneratorTab::changeAgendaItemSettings (int aId)
