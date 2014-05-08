@@ -110,8 +110,12 @@ void ReportGeneratorTab::updateReportTemplateTable ()
 
 void ReportGeneratorTab::on_tableAgenda_doubleClicked(const QModelIndex &index)
 {
-  int top_id = ui->tableAgenda->model()->index(index.row(),0).data().toInt();
-  changeAgendaItemSettings (top_id);
+  if (ui->tableAgenda->selectionModel()->selectedRows().count() == 1)
+  {
+    int top_id = ui->tableAgenda->model()->index(index.row(),0).data().toInt();
+    changeAgendaItemSettings (top_id);
+  }
+  QMessageBox::information(this, "Fehler", "Es wurde kein Eintrag ausgewählt.");
 }
 
 void ReportGeneratorTab::changeAgendaItemSettings (int aId)
@@ -785,12 +789,15 @@ void ReportGeneratorTab::on_editEntry_clicked()
 {
   if (0 != ui->tableAgenda->selectionModel())
   {
+    if (ui->tableAgenda->selectionModel()->selectedRows().count() == 1)
     {
       int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
       int top_id = ui->tableAgenda->model()->index(selectedRow,0).data().toInt();
 
       changeAgendaItemSettings(top_id);
     }
+    else
+      QMessageBox::information(this, "Fehler", "Es wurde kein Eintrag ausgewählt.");
   }
   else
     QMessageBox::information(this, "Fehler", "Interner Fehler");
@@ -887,51 +894,56 @@ void ReportGeneratorTab::on_moveAgendaItemDown_clicked()
 
 void ReportGeneratorTab::on_deleteEntry_clicked()
 {
-  QMessageBox::StandardButton reply = QMessageBox::question(this, "Achtung", "Beschluss wirklich löschen?", QMessageBox::Yes|QMessageBox::No);
-  if (reply == QMessageBox::Yes)
+  if (ui->tableAgenda->selectionModel()->selectedRows().count() == 1)
   {
-      int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
-      int top_id = ui->tableAgenda->model()->index(selectedRow, 0).data().toInt();
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "Achtung", "Beschluss wirklich löschen?", QMessageBox::Yes|QMessageBox::No);
+    if (reply == QMessageBox::Yes)
+    {
+        int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
+        int top_id = ui->tableAgenda->model()->index(selectedRow, 0).data().toInt();
 
-      QSqlQuery query (*Database::getInstance()->getDatabase());
-      query.prepare("DELETE FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :topid");
+        QSqlQuery query (*Database::getInstance()->getDatabase());
+        query.prepare("DELETE FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :topid");
 
-      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-      query.bindValue(":year", Database::getInstance()->getCurrentYear());
-      query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-      query.bindValue(":topid", top_id);
-      query.exec();
+        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+        query.bindValue(":year", Database::getInstance()->getCurrentYear());
+        query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+        query.bindValue(":topid", top_id);
+        query.exec();
 
-      //update top ids
-      query.prepare("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id > :topid");
-      query.bindValue(":topid", top_id);
-      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-      query.bindValue(":year", Database::getInstance()->getCurrentYear());
-      query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-      query.exec();
+        //update top ids
+        query.prepare("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id > :topid");
+        query.bindValue(":topid", top_id);
+        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+        query.bindValue(":year", Database::getInstance()->getCurrentYear());
+        query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+        query.exec();
 
-      int old_Id = 0;
-      int new_Id = 0;
-      while (query.next ())
-      {
-          old_Id = query.value(0).toInt();
-          new_Id = old_Id - 1;
+        int old_Id = 0;
+        int new_Id = 0;
+        while (query.next ())
+        {
+            old_Id = query.value(0).toInt();
+            new_Id = old_Id - 1;
 
-          query.prepare("UPDATE Beschluesse SET top_id = :newid WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :oldid");
-          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query.bindValue(":year", Database::getInstance()->getCurrentYear());
-          query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-          query.bindValue(":oldid", old_Id);
-          query.bindValue(":newid", new_Id);
-          query.exec();
+            query.prepare("UPDATE Beschluesse SET top_id = :newid WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :oldid");
+            query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+            query.bindValue(":year", Database::getInstance()->getCurrentYear());
+            query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+            query.bindValue(":oldid", old_Id);
+            query.bindValue(":newid", new_Id);
+            query.exec();
 
-          query.prepare("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id > :topid");
-          query.bindValue(":topid", new_Id);
-          query.exec();
-      }
+            query.prepare("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id > :topid");
+            query.bindValue(":topid", new_Id);
+            query.exec();
+        }
 
-      updateAgendaTable();
+        updateAgendaTable();
+    }
   }
+  else
+    QMessageBox::information(this, "Fehler", "Es wurde kein Eintrag zum Löschen ausgewählt.");
 }
 
 void ReportGeneratorTab::on_addDecission_clicked()

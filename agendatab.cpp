@@ -122,8 +122,11 @@ void AgendaTab::changeAgendaItemSettings (int aTopId)
 
 void AgendaTab::on_tableAgenda_doubleClicked(const QModelIndex &index)
 {
+  if (ui->tableAgenda->selectionModel()->selectedRows().count() == 1)
+  {
     int top_id = ui->tableAgenda->model()->index(index.row(),0).data().toInt();
     changeAgendaItemSettings(top_id);
+  }
 }
 
 void AgendaTab::on_addEntry_clicked()
@@ -168,25 +171,22 @@ void AgendaTab::on_addEntry_clicked()
 
 void AgendaTab::on_editEntry_clicked()
 {
-    if (0 != ui->tableAgenda->selectionModel())
-    {
-      //check if selection in tableview is valid
-      if (ui->tableAgenda->selectionModel()->selection().indexes().count() == 1)
-      {
-          int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
-          int top_id = ui->tableAgenda->model()->index(selectedRow,0).data().toInt();
+  //check if selection in tableview is valid
+  if (ui->tableAgenda->selectionModel()->selectedRows().count() == 1)
+  {
+      int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
+      int top_id = ui->tableAgenda->model()->index(selectedRow,0).data().toInt();
 
-          changeAgendaItemSettings(top_id);
-      }
-      else if (ui->tableAgenda->selectionModel()->selection().indexes().count() == 0)
-        QMessageBox::information(this, "Fehler", "Bitte eine Zeile auswählen.");
-    }
-    else
-      QMessageBox::information(this, "Fehler", "Interner Fehler");
+      changeAgendaItemSettings(top_id);
+  }
+  else if (ui->tableAgenda->selectionModel()->selection().indexes().count() == 0)
+    QMessageBox::information(this, "Fehler", "Bitte eine Zeile auswählen.");
 }
 
 void AgendaTab::on_deleteEntry_clicked()
 {
+  if (ui->tableAgenda->selectionModel()->selectedRows().count() == 1)
+  {
     QMessageBox::StandardButton reply = QMessageBox::question(this, "Achtung", "Tagesordnungspunkt wirklich löschen?", QMessageBox::Yes|QMessageBox::No);
     if (reply == QMessageBox::Yes)
     {
@@ -230,9 +230,21 @@ void AgendaTab::on_deleteEntry_clicked()
           else
             next = false;
         }
-
         updateAgendaTable();
+        ui->tableAgenda->setFocus();
+
+        //set focussed item
+        int newRowSelection = 0;
+        if (ui->tableAgenda->model()->rowCount() > selectedRow)
+          newRowSelection = selectedRow;
+        else
+          newRowSelection = ui->tableAgenda->model()->rowCount();
+
+        ui->tableAgenda->selectRow(newRowSelection);
     }
+  }
+  else
+  QMessageBox::information(this, "Fehler", "Es wurde kein Eintrag zum Löschen ausgewählt.");
 }
 
 void AgendaTab::on_moveAgendaItemUp_clicked()
@@ -275,8 +287,8 @@ void AgendaTab::on_moveAgendaItemUp_clicked()
           query.exec();
 
           updateAgendaTable();
+          ui->tableAgenda->setFocus();
           ui->tableAgenda->selectRow(top_id - 2);
-          //todo: set selected index on moved row
       }
   }
 }
@@ -320,9 +332,8 @@ void AgendaTab::on_moveAgendaItemDown_clicked()
         query.exec();
 
         updateAgendaTable();
+        ui->tableAgenda->setFocus();
         ui->tableAgenda->selectRow(top_id);
-
-        //todo: set selected index on moved row
     }
   }
 }

@@ -54,7 +54,7 @@ void PatternEditor::on_editEntry_clicked()
   if (0 != ui->tablePatterns->selectionModel())
   {
     //check if selection in tableview is valid
-    if (ui->tablePatterns->selectionModel()->selection().indexes().count() == 1)
+    if (ui->tablePatterns->selectionModel()->selectedRows().count() == 1)
     {
         int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
         int patternId = ui->tablePatterns->model()->index(selectedRow,0).data().toInt();
@@ -74,8 +74,11 @@ void PatternEditor::on_editEntry_clicked()
 
 void PatternEditor::on_tablePatterns_doubleClicked(const QModelIndex &index)
 {
-  int top_id = ui->tablePatterns->model()->index(index.row(),0).data().toInt();
-  changePatternItemSettings(top_id);
+  if (ui->tablePatterns->selectionModel()->selectedRows().count() == 1)
+  {
+    int top_id = ui->tablePatterns->model()->index(index.row(),0).data().toInt();
+    changePatternItemSettings(top_id);
+  }
 }
 
 void PatternEditor::changePatternItemSettings (int aId)
@@ -161,7 +164,7 @@ void PatternEditor::on_addEntry_clicked()
 
 void PatternEditor::on_deleteEntry_clicked()
 {
-  if (ui->tablePatterns->selectionModel()->selection().indexes().count() == 1)
+  if (ui->tablePatterns->selectionModel()->selectedRows().count() == 1)
   {
       QMessageBox::StandardButton reply = QMessageBox::question(this, "Achtung", "Vorlage wirklich löschen?", QMessageBox::Yes|QMessageBox::No);
       if (reply == QMessageBox::Yes)

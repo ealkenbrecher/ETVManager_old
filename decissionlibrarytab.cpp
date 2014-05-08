@@ -132,7 +132,7 @@ void DecissionLibraryTab::on_editEntry_clicked()
   if (0 != ui->tableAgenda->selectionModel())
   {
     //check if selection in tableview is valid
-    if (ui->tableAgenda->selectionModel()->selection().indexes().count() == 1)
+    if (ui->tableAgenda->selectionModel()->selectedRows().count() == 1)
     {
         int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
         int top_id = ui->tableAgenda->model()->index(selectedRow,0).data().toInt();

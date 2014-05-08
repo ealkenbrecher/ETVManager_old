@@ -51,10 +51,17 @@ void patternEditorReport::on_editEntry_clicked()
 {
   if (0 != ui->tablePatterns->selectionModel())
   {
-    int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
-    int patternId = ui->tablePatterns->model()->index(selectedRow,0).data().toInt();
+    if (ui->tablePatterns->selectionModel()->selectedRows().count() == 1)
+    {
+      int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
+      int patternId = ui->tablePatterns->model()->index(selectedRow,0).data().toInt();
 
-    changePatternItemSettings(patternId);
+      changePatternItemSettings(patternId);
+    }
+    else
+    {
+      QMessageBox::information(this, "Fehler", "Es wurde kein Eintrag ausgewählt.");
+    }
   }
   else
       QMessageBox::information(this, "Fehler", "Interner Fehler");
@@ -62,8 +69,13 @@ void patternEditorReport::on_editEntry_clicked()
 
 void patternEditorReport::on_tablePatterns_doubleClicked(const QModelIndex &index)
 {
-  int top_id = ui->tablePatterns->model()->index(index.row(),0).data().toInt();
-  changePatternItemSettings(top_id);
+  if (ui->tablePatterns->selectionModel()->selectedRows().count() == 1)
+  {
+    int top_id = ui->tablePatterns->model()->index(index.row(),0).data().toInt();
+    changePatternItemSettings(top_id);
+  }
+  else
+    QMessageBox::information(this, "Fehler", "Es wurde kein Eintrag ausgewählt.");
 }
 
 void patternEditorReport::changePatternItemSettings (int aId)
