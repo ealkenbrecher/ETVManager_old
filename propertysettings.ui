@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>401</width>
-    <height>321</height>
+    <width>501</width>
+    <height>451</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,22 +18,30 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>381</width>
-     <height>304</height>
+     <width>481</width>
+     <height>431</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="4" column="1">
-     <widget class="QTextEdit" name="votingType">
-      <property name="acceptRichText">
-       <bool>false</bool>
+    <item row="5" column="2">
+     <widget class="QRadioButton" name="radioButton_2">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>MEA</string>
       </property>
      </widget>
     </item>
-    <item row="6" column="1" rowspan="2">
-     <widget class="QTextEdit" name="deadline">
-      <property name="acceptRichText">
-       <bool>false</bool>
+    <item row="9" column="0" colspan="3">
+     <widget class="QDialogButtonBox" name="buttonBox">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="standardButtons">
+       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
       </property>
      </widget>
     </item>
@@ -45,7 +53,9 @@
        </font>
       </property>
       <property name="text">
-       <string>Stimmrecht</string>
+       <string>Stimmrecht
+ (Text in der
+ Protokollvorlage)</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -64,27 +74,7 @@
       </property>
      </widget>
     </item>
-    <item row="8" column="0" colspan="2">
-     <widget class="QDialogButtonBox" name="buttonBox">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="standardButtons">
-       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QLineEdit" name="propertyName"/>
-    </item>
-    <item row="3" column="1">
-     <widget class="QDoubleSpinBox" name="mea">
-      <property name="maximum">
-       <double>99999.990000000005239</double>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="0" colspan="2">
+    <item row="0" column="0" colspan="3">
      <widget class="QLabel" name="label_6">
       <property name="font">
        <font>
@@ -101,7 +91,7 @@
       </property>
      </widget>
     </item>
-    <item row="5" column="0">
+    <item row="6" column="0">
      <widget class="QLabel" name="label_3">
       <property name="font">
        <font>
@@ -125,7 +115,7 @@
       </property>
      </widget>
     </item>
-    <item row="6" column="0">
+    <item row="7" column="0" rowspan="2">
      <widget class="QLabel" name="label_7">
       <property name="font">
        <font>
@@ -133,17 +123,9 @@
        </font>
       </property>
       <property name="text">
-       <string>Einladungsfrist ETV</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QLineEdit" name="propertyId">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
+       <string>Einladungsfrist ETV
+(Text in der
+Protokollvorlage)</string>
       </property>
      </widget>
     </item>
@@ -159,10 +141,92 @@
       </property>
      </widget>
     </item>
+    <item row="4" column="1" colspan="2">
+     <widget class="QTextEdit" name="votingType">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>120</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>120</height>
+       </size>
+      </property>
+      <property name="acceptRichText">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
     <item row="5" column="1">
+     <widget class="QRadioButton" name="radioButton">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Stimmen</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1" colspan="2">
+     <widget class="QDoubleSpinBox" name="mea">
+      <property name="maximum">
+       <double>99999.990000000005239</double>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1" colspan="2">
+     <widget class="QLineEdit" name="propertyId">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1" colspan="2">
+     <widget class="QLineEdit" name="propertyName"/>
+    </item>
+    <item row="6" column="1" colspan="2">
      <widget class="QSpinBox" name="ownerQuantity">
       <property name="maximum">
        <number>999</number>
+      </property>
+     </widget>
+    </item>
+    <item row="7" column="1" rowspan="2" colspan="2">
+     <widget class="QTextEdit" name="deadline">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>120</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>120</height>
+       </size>
+      </property>
+      <property name="acceptRichText">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QLabel" name="label_8">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Abstimmung</string>
       </property>
      </widget>
     </item>
