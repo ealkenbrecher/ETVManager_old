@@ -121,7 +121,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Stimmen Nein</string>
+       <string>Stimmen/MEA Nein</string>
       </property>
      </widget>
     </item>
@@ -157,7 +157,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Stimmen Enthaltung</string>
+       <string>Stimmen/MEA Enthaltung</string>
       </property>
      </widget>
     </item>
@@ -175,7 +175,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Stimmen Ja</string>
+       <string>Stimmen/MEA Ja</string>
       </property>
      </widget>
     </item>
