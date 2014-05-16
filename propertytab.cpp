@@ -147,6 +147,9 @@ void PropertyTab::on_editPropertySettings_clicked()
     }
     else
     {
+      QMessageBox::StandardButton reply = QMessageBox::question(this, "Achtung", "Das nachträgliche Ändern der Eigenschaften einer Liegenschaft wird nicht empfohlen.\nMöchten Sie wirklich fortfahren?", QMessageBox::Yes|QMessageBox::No);
+      if (reply == QMessageBox::Yes)
+      {
         if (Database::getInstance()->dbIsOk())
         {
             //set values
@@ -167,8 +170,9 @@ void PropertyTab::on_editPropertySettings_clicked()
             query.exec();
 
             refreshView();
-            setCurrentPropertyId ();
+            refreshRealEstateSelector (true);
         }
+      }
     }
 }
 
