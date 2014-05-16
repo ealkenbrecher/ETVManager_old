@@ -94,10 +94,6 @@ void AgendaTab::changeAgendaItemSettings (int aTopId)
     //abort -> do not save settings
     if (itemSettings.exec() != QDialog::Rejected)
     {
-        return;
-    }
-    else if (itemSettings.exec() == QDialog::Accepted)
-    {
         if (Database::getInstance()->dbIsOk())
         {
             QSqlQuery query (*Database::getInstance()->getDatabase());
