@@ -481,7 +481,12 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           int spacerLines = query.value(6).toInt();
 
           //count needed rows for table
-          int rowsVotingText = 5;
+
+          int rowsVotingText = 0;
+
+          if (2 != beschlussArt)
+            rowsVotingText = 5;
+
           int neededRows = 6 + spacerLines + rowsVotingText;
           if ("" == beschlussvorschlagPlain)
             neededRows--;
@@ -531,6 +536,16 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           if (2 != beschlussArt)
           {
             cursor.insertHtml("<b>Beschluss:</b><br>");
+
+            cursor.insertHtml("<b>Abstimmung<b>");
+            cursor.movePosition(QTextCursor::NextRow);
+            cursor.insertText("Ja-Stimmen: ");
+            cursor.movePosition(QTextCursor::NextRow);
+            cursor.insertText("Nein-Stimmen: ");
+            cursor.movePosition(QTextCursor::NextRow);
+            cursor.insertText("Enthaltungen: ");
+            cursor.movePosition(QTextCursor::NextRow);
+            cursor.insertHtml("<b>Verkündung durch den Versammlungsleiter:<b>");
           }
           else
           {
@@ -540,24 +555,14 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           for (int i = 0; i < spacerLines; i++)
             cursor.movePosition(QTextCursor::NextRow);
 
-          cursor.insertHtml("<b>Abstimmung<b>");
-          cursor.movePosition(QTextCursor::NextRow);
-          cursor.insertText("Ja-Stimmen: ");
-          cursor.movePosition(QTextCursor::NextRow);
-          cursor.insertText("Nein-Stimmen: ");
-          cursor.movePosition(QTextCursor::NextRow);
-          cursor.insertText("Enthaltungen: ");
-          cursor.movePosition(QTextCursor::NextRow);
-          cursor.insertHtml("<b>Verkündung durch den Versammlungsleiter:<b>");
-
           cursor.movePosition(QTextCursor::End);
           cursor.insertText("\n\n");
       }
 
-      cursor.insertText("Die Richtigkeit und Vollständigkeit des Protokolls wurde geprüft durch folgende, zur Versammlung anwesende Personen:\n");
-      cursor.insertText("Unterschrift Miteigentümer 1: _______________________, Name in Druckbuchstaben: _______________________\n");
-      cursor.insertText("Unterschrift Miteigentümer 2: _______________________, Name in Druckbuchstaben: _______________________\n");
-      cursor.insertText("Unterschrift Miteigentümer 3: _______________________, Name in Druckbuchstaben: _______________________\n");
+      cursor.insertText("Die Richtigkeit und Vollständigkeit des Protokolls wurde geprüft durch folgende zur Versammlung anwesende Personen:\n\n");
+      cursor.insertText("Unterschrift Miteigentümer 1: _______________________, Name in Druckbuchstaben: _______________________\n\n");
+      cursor.insertText("Unterschrift Miteigentümer 2: _______________________, Name in Druckbuchstaben: _______________________\n\n");
+      cursor.insertText("Unterschrift Miteigentümer 3: _______________________, Name in Druckbuchstaben: _______________________\n\n");
       cursor.insertText("Unterschrift Versammlungsleiter: _______________________");
 
       QPrinter printer(QPrinter::HighResolution);
