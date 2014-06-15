@@ -47,7 +47,7 @@ void GeneratorTab::setTableFormat (QTextTableFormat* pTableFormat)
   {
     QBrush blackBrush(Qt::SolidPattern);
     pTableFormat->setBorderBrush(blackBrush);
-    pTableFormat->setBorder(0.5);
+    pTableFormat->setBorder(5);
     pTableFormat->setCellSpacing(0);
     pTableFormat->setCellPadding(5);
     pTableFormat->setHeaderRowCount(0);
@@ -147,7 +147,7 @@ QString GeneratorTab::generateProcurationAsPdf (const QString &rFilePath)
           QString topSuggestion3Plain = htmlConverter.toPlainText();
 
           //count needed rows for table
-          int neededRows = 5;
+          int neededRows = 8;
           if ("" == topSuggestionPlain)
             neededRows--;
           if ("" == topSuggestion2Plain)
@@ -156,6 +156,7 @@ QString GeneratorTab::generateProcurationAsPdf (const QString &rFilePath)
             neededRows--;
 
           cursor.movePosition(QTextCursor::End);
+          tableFormat.setHeaderRowCount(neededRows);
           cursor.insertTable (neededRows, 1, tableFormat);
 
           cursor.insertHtml("TOP ");
@@ -166,29 +167,29 @@ QString GeneratorTab::generateProcurationAsPdf (const QString &rFilePath)
           if ("" != topSuggestionPlain)
           {
               cursor.movePosition(QTextCursor::NextRow);
-              cursor.insertHtml("[ ] gemäß Beschlussvorschlag");
+              cursor.insertHtml("[ ] Weisung gemäß Beschlussvorschlag");
           }
 
           if ("" != topSuggestion2Plain)
           {
               cursor.movePosition(QTextCursor::NextRow);
-              cursor.insertHtml("[ ] gemäß Beschlussvorschlag Alternative 1");
+              cursor.insertHtml("[ ] Weisung gemäß Beschlussvorschlag Alternative 1");
           }
 
           if ("" != topSuggestion3Plain)
           {
               cursor.movePosition(QTextCursor::NextRow);
-              cursor.insertHtml("[ ] gemäß Beschlussvorschlag Alternative 2");
+              cursor.insertHtml("[ ] Weisung gemäß Beschlussvorschlag Alternative 2");
           }
 
           cursor.movePosition(QTextCursor::NextRow);
 
           if (2 != type)
-            cursor.insertHtml("Weisung:<br>");
+            cursor.insertHtml("[ ] Weisung gemäß folgendem Wortlaut:");
           else
             cursor.insertHtml("Anmerkung:<br>");
 
-          cursor.insertHtml("<hr><br><hr>");
+          //cursor.insertHtml("<hr><br><hr>");
 
           cursor.movePosition(QTextCursor::End);
           cursor.insertHtml ("<br>");
@@ -241,7 +242,7 @@ QString GeneratorTab::generateAgendaAsPdf (const QString &rFilePath)
         QTextTableFormat tableFormat;
         setTableFormat (&tableFormat);
 
-        while (query.next())
+        if (query.next())
         {
             //insert header text
             cursor.movePosition(QTextCursor::End);
@@ -317,6 +318,7 @@ QString GeneratorTab::generateAgendaAsPdf (const QString &rFilePath)
               neededRows--;
 
             cursor.movePosition(QTextCursor::End);
+            tableFormat.setHeaderRowCount(neededRows);
             cursor.insertTable (neededRows, 1, tableFormat);
 
             cursor.insertText("TOP ");
@@ -395,7 +397,7 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
       setTableFormat (&tableFormat);
       //tableFormat.setPageBreakPolicy (QTextFormat::PageBreak_AlwaysAfter);
 
-      while (query.next())
+      if (query.next())
       {
           //insert header text
           cursor.movePosition(QTextCursor::End);
@@ -479,7 +481,8 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           int spacerLines = query.value(6).toInt();
 
           //count needed rows for table
-          int neededRows = 6;
+          int rowsVotingText = 5;
+          int neededRows = 6 + spacerLines + rowsVotingText;
           if ("" == beschlussvorschlagPlain)
             neededRows--;
           if ("" == beschlussvorschlagAlt1Plain)
@@ -491,6 +494,7 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
 
           cursor.movePosition(QTextCursor::End);
           tableFormat.setPageBreakPolicy(QTextFormat::PageBreak_Auto);
+          tableFormat.setHeaderRowCount(neededRows);
           cursor.insertTable (neededRows, 1, tableFormat);
           cursor.insertHtml("TOP ");
           cursor.insertHtml(query.value(0).toString());
@@ -533,15 +537,29 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
             cursor.insertHtml("<b>Anmerkungen:</b><br>");
           }
 
-          int i = 0;
-          for (i=0; i < spacerLines; i++)
-          {
-            cursor.insertHtml("<hr>");
-          }
+          for (int i = 0; i < spacerLines; i++)
+            cursor.movePosition(QTextCursor::NextRow);
+
+          cursor.insertHtml("<b>Abstimmung<b>");
+          cursor.movePosition(QTextCursor::NextRow);
+          cursor.insertText("Ja-Stimmen: ");
+          cursor.movePosition(QTextCursor::NextRow);
+          cursor.insertText("Nein-Stimmen: ");
+          cursor.movePosition(QTextCursor::NextRow);
+          cursor.insertText("Enthaltungen: ");
+          cursor.movePosition(QTextCursor::NextRow);
+          cursor.insertHtml("<b>Verkündung durch den Versammlungsleiter:<b>");
 
           cursor.movePosition(QTextCursor::End);
           cursor.insertText("\n\n");
       }
+
+      cursor.insertText("Die Richtigkeit und Vollständigkeit des Protokolls wurde geprüft durch folgende, zur Versammlung anwesende Personen:\n");
+      cursor.insertText("Unterschrift Miteigentümer 1: _______________________, Name in Druckbuchstaben: _______________________\n");
+      cursor.insertText("Unterschrift Miteigentümer 2: _______________________, Name in Druckbuchstaben: _______________________\n");
+      cursor.insertText("Unterschrift Miteigentümer 3: _______________________, Name in Druckbuchstaben: _______________________\n");
+      cursor.insertText("Unterschrift Versammlungsleiter: _______________________");
+
       QPrinter printer(QPrinter::HighResolution);
       printer.setPageSize(QPrinter::A4);
       printer.setOutputFormat(QPrinter::PdfFormat);
@@ -580,7 +598,7 @@ QString GeneratorTab::generateReportTranscriptAsPdf (const QString &rFilePath)
       QTextTableFormat tableFormat;
       setTableFormat (&tableFormat);
 
-      while (query.next())
+      if (query.next())
       {
           //insert header text
           cursor.movePosition(QTextCursor::End);
@@ -675,6 +693,7 @@ QString GeneratorTab::generateReportTranscriptAsPdf (const QString &rFilePath)
 
         cursor.movePosition(QTextCursor::End);
         tableFormat.setPageBreakPolicy(QTextFormat::PageBreak_Auto);
+        tableFormat.setHeaderRowCount(neededRows);
         cursor.insertTable (neededRows, 1, tableFormat);
         cursor.insertHtml("TOP ");
         cursor.insertHtml(topId);
@@ -866,12 +885,16 @@ QString GeneratorTab::generateDecissionLibraryAsPdf (const QString &rFilePath)
 
           if (plusBeschreibung && descriptionPlain != "")
           {
+            tableFormat.setHeaderRowCount(3);
             cursor.insertTable (3, 1, tableFormat);
             cursor.insertHtml(description);
             cursor.movePosition(QTextCursor::NextRow);
           }
           else
+          {
+            tableFormat.setHeaderRowCount(3);
             cursor.insertTable (2, 1, tableFormat);
+          }
 
           cursor.insertHtml("<b>Beschlussformulierung:</b><br>");
           cursor.insertHtml(decission);
