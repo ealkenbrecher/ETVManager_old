@@ -304,12 +304,18 @@
         <property name="text">
          <string>Versammlung</string>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QRadioButton" name="ohneBeschlussoption">
         <property name="text">
          <string>Ohne (Keine Beschlussfassung möglich!)</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
