@@ -533,10 +533,17 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           }
 
           cursor.movePosition(QTextCursor::NextRow);
+
+          if (2 != beschlussArt)
+            cursor.insertHtml("<b>Beschluss:</b>");
+          else
+            cursor.insertHtml("<b>Anmerkungen:</b>");
+
+          for (int i = 0; i < spacerLines; i++)
+            cursor.movePosition(QTextCursor::NextRow);
+
           if (2 != beschlussArt)
           {
-            cursor.insertHtml("<b>Beschluss:</b><br>");
-
             cursor.insertHtml("<b>Abstimmung<b>");
             cursor.movePosition(QTextCursor::NextRow);
             cursor.insertText("Ja-Stimmen: ");
@@ -547,13 +554,6 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
             cursor.movePosition(QTextCursor::NextRow);
             cursor.insertHtml("<b>Verkündung durch den Versammlungsleiter:<b>");
           }
-          else
-          {
-            cursor.insertHtml("<b>Anmerkungen:</b><br>");
-          }
-
-          for (int i = 0; i < spacerLines; i++)
-            cursor.movePosition(QTextCursor::NextRow);
 
           cursor.movePosition(QTextCursor::End);
           cursor.insertText("\n\n");
