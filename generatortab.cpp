@@ -249,14 +249,15 @@ QString GeneratorTab::generateAgendaAsPdf (const QString &rFilePath)
         {
             //insert header text
             cursor.movePosition(QTextCursor::End);
+            tableFormat.setHeaderRowCount(2);
             cursor.insertTable (2, 1, tableFormat);
             cursor.insertHtml("<b>T A G E S O R D N U N G</b>");
             cursor.movePosition(QTextCursor::NextRow);
-            cursor.insertText("Eigentümerversammlung ");
-            cursor.insertText(query.value(2).toString());
-            cursor.insertText("/");
-            cursor.insertText(query.value(1).toString());
-            cursor.insertText(" der WEG ");
+            cursor.insertHtml("Eigentümerversammlung ");
+            cursor.insertHtml(query.value(2).toString());
+            cursor.insertHtml("/");
+            cursor.insertHtml(query.value(1).toString());
+            cursor.insertHtml(" der WEG ");
 
             QSqlQuery queryPropertyName (*Database::getInstance()->getDatabase());
             //get current property name
@@ -266,17 +267,17 @@ QString GeneratorTab::generateAgendaAsPdf (const QString &rFilePath)
 
             while (queryPropertyName.next())
             {
-              cursor.insertText(queryPropertyName.value(1).toString());
+              cursor.insertHtml(queryPropertyName.value(1).toString());
             }
 
-            cursor.insertHtml("<br><b>Ort: </b>");
+            cursor.insertHtml("<br><b>Ort: </b><br>");
             cursor.insertHtml(query.value(5).toString());
-            cursor.insertHtml("<br><b>Datum: </b>");
+            cursor.insertHtml("<br><b>Datum: </b><br>");
             cursor.insertText(query.value(3).toString());
-            cursor.insertHtml(", <b>Uhrzeit: </b>");
+            cursor.insertHtml("<br><b>Uhrzeit: </b><br>");
             cursor.insertText(query.value(4).toTime().toString());
             cursor.movePosition(QTextCursor::End);
-            cursor.insertText("\n\n");
+            cursor.insertHtml("<br>");
         }
 
         //insert agenda items
@@ -312,16 +313,23 @@ QString GeneratorTab::generateAgendaAsPdf (const QString &rFilePath)
             //count needed rows for table
             int neededRows = 5;
             if ("" == topDescriptionPlain)
-              neededRows--;
+              --neededRows;
             if ("" == topSuggestionPlain)
-              neededRows--;
+              --neededRows;
             if ("" == topSuggestion2Plain)
-              neededRows--;
+              --neededRows;
             if ("" == topSuggestion3Plain)
-              neededRows--;
+              --neededRows;
+
+            htmlConverter.setHtml(topHeader);
+            qDebug () << htmlConverter.toPlainText();
+
+            qDebug () << "neededRows: " << neededRows;
 
             cursor.movePosition(QTextCursor::End);
+
             tableFormat.setHeaderRowCount(neededRows);
+
             cursor.insertTable (neededRows, 1, tableFormat);
 
             cursor.insertText("TOP ");
@@ -357,7 +365,7 @@ QString GeneratorTab::generateAgendaAsPdf (const QString &rFilePath)
             }
 
             cursor.movePosition(QTextCursor::End);
-            cursor.insertText("\n\n");
+            cursor.insertHtml("<br>");
         }
 
         QPrinter printer(QPrinter::HighResolution);
@@ -429,7 +437,7 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           cursor.insertHtml("<br><b>Datum: </b>");
           cursor.insertText(query.value(3).toString());
           cursor.movePosition(QTextCursor::End);
-          cursor.insertText("\n\n");
+          cursor.insertHtml("<br>");
 
           //get report cover page
           query2.clear();
@@ -440,13 +448,13 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           query2.exec();
 
           cursor.movePosition(QTextCursor::End);
-          cursor.insertText("\n");
+          cursor.insertHtml("<br>");
 
           while (query2.next())
             cursor.insertHtml(replaceCoverPageTagsByUnderscore (query2.value(0).toString()));
 
           cursor.movePosition(QTextCursor::End);
-          cursor.insertText("\n");
+          cursor.insertHtml("<br>");
       }
 
       //insert agenda items
@@ -461,7 +469,7 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
       cursor.insertTable(1,1,tableFormat);
       cursor.insertHtml("<b>B E S C H L U E S S E</b>");
       cursor.movePosition(QTextCursor::End);
-      cursor.insertText("\n\n");
+      cursor.insertHtml("<br><br>");
 
       while (query.next())
       {
@@ -563,7 +571,7 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           }
 
           cursor.movePosition(QTextCursor::End);
-          cursor.insertText("\n\n");
+          cursor.insertHtml("<br><br>");
       }
 
       cursor.insertText("Die Richtigkeit und Vollständigkeit des Protokolls wurde geprüft durch folgende zur Versammlung anwesende Personen:\n\n");
@@ -596,172 +604,192 @@ QString GeneratorTab::generateReportTranscriptAsPdf (const QString &rFilePath)
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
-      db->open();
-      QSqlQuery query (*db);
+    db->open();
+    QSqlQuery query (*db);
 
-      //get years
-      query.prepare("SELECT * FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
-      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-      query.bindValue(":year", Database::getInstance()->getCurrentYear());
-      query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
-      query.exec();
+    //get years
+    query.prepare("SELECT * FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
+    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+    query.bindValue(":year", Database::getInstance()->getCurrentYear());
+    query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
+    query.exec();
 
-      QString text;
-      QTextDocument* doc = new QTextDocument ();
-      QTextCursor cursor (doc);
+    QString text;
+    QTextDocument* doc = new QTextDocument ();
+    QTextCursor cursor (doc);
 
-      QTextTableFormat tableFormat;
-      setTableFormat (&tableFormat);
+    QTextTableFormat tableFormat;
+    setTableFormat (&tableFormat);
 
-      if (query.next())
+    if (query.next())
+    {
+        //insert header text
+        cursor.movePosition(QTextCursor::End);
+        cursor.insertTable (2, 1, tableFormat);
+
+        cursor.insertHtml("<b>P R O T O K O L L A B S C H R I F T</b>");
+        cursor.movePosition(QTextCursor::NextRow);
+        cursor.insertText("Der WEG ");
+
+        QSqlQuery query2 (*Database::getInstance()->getDatabase());
+        //get current property name
+        query2.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
+        query2.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+        query2.exec();
+
+        while (query2.next())
+        {
+            cursor.insertText(query2.value(1).toString());
+        }
+
+        cursor.insertHtml("<br><b>Ort: </b>");
+        cursor.insertHtml(query.value(5).toString());
+        cursor.insertHtml("<br><b>Datum: </b>");
+        cursor.insertText(query.value(3).toString());
+        cursor.movePosition(QTextCursor::End);
+        cursor.insertText("\n\n");
+
+        //get report cover page
+        query2.prepare("SELECT Protokollabschrift FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr =:year AND etv_nr =:etvNum");
+        query2.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+        query2.bindValue(":year", Database::getInstance()->getCurrentYear());
+        query2.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
+        query2.exec();
+
+        cursor.movePosition(QTextCursor::End);
+        cursor.insertText("\n");
+
+        if (query2.next())
+          cursor.insertHtml(query2.value(0).toString());
+
+        cursor.movePosition(QTextCursor::End);
+        cursor.insertText("\n");
+    }
+
+    //insert agenda items
+    query.prepare("SELECT * FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
+    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+    query.bindValue(":year", Database::getInstance()->getCurrentYear());
+    query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+    query.exec();
+
+    cursor.movePosition(QTextCursor::End);
+    tableFormat.setPageBreakPolicy (QTextFormat::PageBreak_AlwaysBefore);
+    cursor.insertTable(1,1,tableFormat);
+    cursor.insertHtml("<b>B E S C H L U E S S E</b>");
+    cursor.movePosition(QTextCursor::End);
+    cursor.insertText("\n\n");
+
+    while (query.next())
+    {
+      QString topId         = query.value(3).toString();
+      QString protokollId   = query.value(4).toString();
+      QString header        = query.value(5).toString();
+      QString description   = query.value(6).toString();
+      QString decission     = query.value(7).toString();
+      QString voteResult    = query.value(8).toString();
+      float yes             = query.value(9).toFloat();
+      float no              = query.value(10).toFloat();
+      float abstention      = query.value(11).toFloat();
+      int type              = query.value(12).toInt();
+
+      QTextDocument htmlConverter;
+
+      htmlConverter.setHtml(description);
+      QString descriptionPlain = htmlConverter.toPlainText();
+
+      htmlConverter.setHtml(decission);
+      QString decissionPlain = htmlConverter.toPlainText();
+
+      htmlConverter.setHtml(voteResult);
+      QString voteResultPlain = htmlConverter.toPlainText();
+
+      //count needed rows for table
+      int neededRows = 5;
+
+      qDebug () << "xxxxxxxxxxxxxxxxx";
+
+      htmlConverter.setHtml(header);
+      qDebug () << "header:" << htmlConverter.toPlainText();;
+
+      if ("" == descriptionPlain)
       {
-          //insert header text
-          cursor.movePosition(QTextCursor::End);
-          cursor.insertTable (2, 1, tableFormat);
-
-          cursor.insertHtml("<b>P R O T O K O L L A B S C H R I F T</b>");
-          cursor.movePosition(QTextCursor::NextRow);
-          cursor.insertText("Der WEG ");
-
-          QSqlQuery query2 (*Database::getInstance()->getDatabase());
-          //get current property name
-          query2.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
-          query2.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query2.exec();
-
-          while (query2.next())
-          {
-              cursor.insertText(query2.value(1).toString());
-          }
-
-          cursor.insertHtml("<br><b>Ort: </b>");
-          cursor.insertHtml(query.value(5).toString());
-          cursor.insertHtml("<br><b>Datum: </b>");
-          cursor.insertText(query.value(3).toString());
-          cursor.movePosition(QTextCursor::End);
-          cursor.insertText("\n\n");
-
-          //get report cover page
-          query2.prepare("SELECT Protokollabschrift FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr =:year AND etv_nr =:etvNum");
-          query2.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query2.bindValue(":year", Database::getInstance()->getCurrentYear());
-          query2.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
-          query2.exec();
-
-          cursor.movePosition(QTextCursor::End);
-          cursor.insertText("\n");
-
-          if (query2.next())
-            cursor.insertHtml(query2.value(0).toString());
-
-          cursor.movePosition(QTextCursor::End);
-          cursor.insertText("\n");
+        qDebug () << "descriptionPlain";
+        --neededRows;
+      }
+      if ("" == decissionPlain)
+      {
+        qDebug () << "decissionPlain";
+        --neededRows;
+      }
+      if ("" == voteResultPlain)
+      {
+        qDebug () << "voteResultPlain";
+        --neededRows;
+      }
+      if (0 == yes && 0 == no && 0 == abstention)
+      {
+        --neededRows;
       }
 
-      //insert agenda items
-      query.prepare("SELECT * FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
-      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-      query.bindValue(":year", Database::getInstance()->getCurrentYear());
-      query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-      query.exec();
+      qDebug () << "neededRows: " << neededRows;
 
       cursor.movePosition(QTextCursor::End);
-      tableFormat.setPageBreakPolicy (QTextFormat::PageBreak_AlwaysBefore);
-      cursor.insertTable(1,1,tableFormat);
-      cursor.insertHtml("<b>B E S C H L U E S S E</b>");
-      cursor.movePosition(QTextCursor::End);
-      cursor.insertText("\n\n");
+      tableFormat.setPageBreakPolicy(QTextFormat::PageBreak_Auto);
+      tableFormat.setHeaderRowCount(neededRows);
+      cursor.insertTable (neededRows, 1, tableFormat);
+      cursor.insertHtml("TOP ");
+      cursor.insertHtml(topId);
+      cursor.insertText(": ");
+      cursor.insertHtml(header);
 
-      while (query.next())
+      if ("" != descriptionPlain)
       {
-        QString topId         = query.value(3).toString();
-        QString protokollId   = query.value(4).toString();
-        QString header        = query.value(5).toString();
-        QString description   = query.value(6).toString();
-        QString decission     = query.value(7).toString();
-        QString voteResult    = query.value(8).toString();
-        float yes             = query.value(9).toFloat();
-        float no              = query.value(10).toFloat();
-        float abstention      = query.value(11).toFloat();
-        int type              = query.value(12).toInt();
+        cursor.movePosition(QTextCursor::NextRow);
+        cursor.insertHtml(description);
+      }
 
-        QTextDocument htmlConverter;
+      if ("" != decissionPlain)
+      {
+        cursor.movePosition(QTextCursor::NextRow);
+        if (2 != type)
+        {
+          cursor.insertHtml("<b>Beschluss:</b><br>");
+        }
+        else
+        {
+          cursor.insertHtml("<b>Anmerkungen:</b><br>");
+        }
+        cursor.insertHtml(decission);
+      }
 
-        htmlConverter.setHtml(description);
-        QString descriptionPlain = htmlConverter.toPlainText();
+      if ("" != voteResultPlain)
+      {
+          cursor.movePosition(QTextCursor::NextRow);
+          cursor.insertHtml(voteResult);
+      }
 
-        htmlConverter.setHtml(decission);
-        QString decissionPlain = htmlConverter.toPlainText();
-
-        htmlConverter.setHtml(voteResult);
-        QString voteResultPlain = htmlConverter.toPlainText();
-
-        //count needed rows for table
-        int neededRows = 4;
-
-        if ("" == descriptionPlain)
-          neededRows--;
-        if ("" == decissionPlain)
-          neededRows--;
-        if ("" == voteResultPlain)
-          neededRows--;
-
-        cursor.movePosition(QTextCursor::End);
-        tableFormat.setPageBreakPolicy(QTextFormat::PageBreak_Auto);
-        tableFormat.setHeaderRowCount(neededRows);
-        cursor.insertTable (neededRows, 1, tableFormat);
-        cursor.insertHtml("TOP ");
-        cursor.insertHtml(topId);
+      if (0 != yes || 0 != no || 0 != abstention)
+      {
+        cursor.movePosition(QTextCursor::NextRow);
+        cursor.insertTable (1, 3, tableFormat);
+        cursor.insertText(StringReplacer::getInstance()->getReplacementString("%StimmenJa%"));
         cursor.insertText(": ");
-        cursor.insertHtml(header);
+        cursor.insertHtml(QString::number(yes));
 
-        if ("" != descriptionPlain)
-        {
-          cursor.movePosition(QTextCursor::NextRow);
-          cursor.insertHtml(description);
-        }
+        cursor.movePosition(QTextCursor::NextCell);
+        cursor.insertText(StringReplacer::getInstance()->getReplacementString("%StimmenNein%"));
+        cursor.insertText(": ");
+        cursor.insertHtml(QString::number(no));
 
-        if ("" != decissionPlain)
-        {
-          cursor.movePosition(QTextCursor::NextRow);
-          if (2 != type)
-          {
-            cursor.insertHtml("<b>Beschluss:</b><br>");
-          }
-          else
-          {
-            cursor.insertHtml("<b>Anmerkungen:</b><br>");
-          }
-          cursor.insertHtml(decission);
-        }
-
-        if ("" != voteResultPlain)
-        {
-            cursor.movePosition(QTextCursor::NextRow);
-            cursor.insertHtml(voteResult);
-        }
-
+        cursor.movePosition(QTextCursor::NextCell);
+        cursor.insertText(StringReplacer::getInstance()->getReplacementString("%StimmenEnthaltung%"));
+        cursor.insertText(": ");
+        cursor.insertHtml(QString::number(abstention));
         cursor.movePosition(QTextCursor::End);
-
-        if (0 != yes || 0 != no || 0 != abstention)
-        {
-          cursor.insertTable (1, 3, tableFormat);
-          cursor.insertText(StringReplacer::getInstance()->getReplacementString("%StimmenJa%"));
-          cursor.insertText(": ");
-          cursor.insertHtml(QString::number(yes));
-
-          cursor.movePosition(QTextCursor::NextCell);
-          cursor.insertText(StringReplacer::getInstance()->getReplacementString("%StimmenNein%"));
-          cursor.insertText(": ");
-          cursor.insertHtml(QString::number(no));
-
-          cursor.movePosition(QTextCursor::NextCell);
-          cursor.insertText(StringReplacer::getInstance()->getReplacementString("%StimmenEnthaltung%"));
-          cursor.insertText(": ");
-          cursor.insertHtml(QString::number(abstention));
-          cursor.movePosition(QTextCursor::End);
-        }
-        cursor.insertHtml("<br>");
+      }
+      cursor.movePosition(QTextCursor::End);
+      cursor.insertHtml("<br>");
     }
 
     cursor.insertHtml("<br><br><br>");
@@ -894,40 +922,37 @@ QString GeneratorTab::generateDecissionLibraryAsPdf (const QString &rFilePath)
           QTextTableFormat tableFormat;
           setTableFormat (&tableFormat);
 
-          cursor.movePosition(QTextCursor::End);
+          int neededRows = 8;
+
+          tableFormat.setHeaderRowCount(neededRows);
+
           tableFormat.setPageBreakPolicy(QTextFormat::PageBreak_Auto);
-          cursor.insertTable (1, 2, tableFormat);
+          //tableFormat.setBorder(0);
+          cursor.insertTable (neededRows, 1, tableFormat);
           cursor.insertText(StringReplacer::getInstance()->getReplacementString("%laufendeNummerBeschlusssammlung%"));
           cursor.insertText(": ");
           cursor.insertText(QString::number(startNumber));
-          cursor.movePosition(QTextCursor::NextCell);
+          cursor.movePosition(QTextCursor::NextRow);
           QString headerHtml ("<b>");
           headerHtml.append(header);
           headerHtml.append("</b>");
           cursor.insertHtml(headerHtml);
-          cursor.movePosition(QTextCursor::End);
+          cursor.movePosition(QTextCursor::NextRow);
 
           if (plusBeschreibung && descriptionPlain != "")
           {
-            tableFormat.setHeaderRowCount(3);
-            cursor.insertTable (3, 1, tableFormat);
             cursor.insertHtml(description);
             cursor.movePosition(QTextCursor::NextRow);
-          }
-          else
-          {
-            tableFormat.setHeaderRowCount(3);
-            cursor.insertTable (2, 1, tableFormat);
           }
 
           cursor.insertHtml("<b>Beschlussformulierung:</b><br>");
           cursor.insertHtml(decission);
+
           cursor.movePosition(QTextCursor::NextRow);
           cursor.insertHtml("<b>Vermerke:</b><br>");
           cursor.insertHtml(vermerke);
-          cursor.movePosition(QTextCursor::End);
 
-          cursor.insertTable(2, 1, tableFormat);
+          cursor.movePosition(QTextCursor::NextRow);
 
           QString voteTypeString ("");
           if (0 == voteType)
@@ -939,13 +964,10 @@ QString GeneratorTab::generateDecissionLibraryAsPdf (const QString &rFilePath)
           cursor.insertText(voteTypeString);
 
           cursor.movePosition(QTextCursor::NextRow);
-
-          cursor.insertHtml ("<b>Gerichtsentscheidung:</b>\n");
+          cursor.insertHtml ("<b>Gerichtsentscheidung:</b><br>");
           cursor.insertHtml(gerichtsentscheidung);
 
-          cursor.movePosition(QTextCursor::End);
-
-          cursor.insertTable(1, 2, tableFormat);
+          cursor.movePosition(QTextCursor::NextRow);
 
           //get date of etv
           QSqlQuery query2 (*db);
@@ -973,11 +995,12 @@ QString GeneratorTab::generateDecissionLibraryAsPdf (const QString &rFilePath)
             dump.append(query.value(5).toString());*/
           }
 
-          cursor.insertText("Datum: ");
+          cursor.insertHtml("<b>Datum:</b><br>");
           cursor.insertText(etvDate);
 
-          cursor.movePosition (QTextCursor::NextCell);
-          cursor.insertText(StringReplacer::getInstance()->getReplacementString("%Versammlungsleiter%"));
+          cursor.movePosition (QTextCursor::NextRow);
+          cursor.insertHtml("<b>Unterschrift des Verwalters / des Vertretungsberechtigen: </b>");
+          cursor.insertHtml("<br>");
 
           cursor.movePosition (QTextCursor::End);
 
