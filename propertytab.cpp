@@ -66,10 +66,13 @@ void PropertyTab::refreshView ()
 
 void PropertyTab::refreshRealEstateSelector (bool aKeepSelectedIndex)
 {
-  if (Database::getInstance()->dbIsOk())
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+  if (0 != db)
   {
     //Liegenschaften aus Datenbank holen
-    QSqlQuery query (*Database::getInstance()->getDatabase());
+    db->open();
+    QSqlQuery query (*db);
     query.prepare("SELECT obj_name,obj_id from Objekt ORDER BY obj_name ASC");
     query.exec();
 
@@ -108,6 +111,7 @@ void PropertyTab::refreshRealEstateSelector (bool aKeepSelectedIndex)
     disableUi (false);
     setCurrentPropertyId ();
   }
+  db->close();
 }
 
 void PropertyTab::setCurrentPropertyId ()
@@ -123,6 +127,7 @@ void PropertyTab::on_editPropertySettings_clicked()
     PropertySettings dialog (this);
 
     //get values
+    Database::getInstance()->getDatabase()->open();
     QSqlQuery query (*Database::getInstance()->getDatabase());
     query.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -138,7 +143,7 @@ void PropertyTab::on_editPropertySettings_clicked()
     dialog.setInvitationDeadline(model->record(0).value(5).toString());
     dialog.setpropertyId(Database::getInstance()->getCurrentPropertyId());
 
-    //int oldVotingRule = model->record(0).value(3).toInt();
+    Database::getInstance()->getDatabase()->close();
 
     //abort -> do not save settings
     if (dialog.exec() != QDialog::Accepted)
@@ -153,6 +158,7 @@ void PropertyTab::on_editPropertySettings_clicked()
         if (Database::getInstance()->dbIsOk())
         {
             //set values
+            Database::getInstance()->getDatabase()->open();
             QSqlQuery query (*Database::getInstance()->getDatabase());
             query.prepare("UPDATE Objekt SET obj_name=:name, obj_mea=:mea, obj_stimmrecht=:votingtype, obj_anz_et=:ownerQuantity, obj_inv_deadline=:deadline WHERE obj_id = :id");
             query.bindValue(":name", dialog.propertyName());
@@ -168,6 +174,7 @@ void PropertyTab::on_editPropertySettings_clicked()
             StringReplacer::getInstance()->addPair("%StimmrechtProtokoll%%", dialog.votingRule());
 
             query.exec();
+            Database::getInstance()->getDatabase()->close();
 
             refreshView();
             refreshRealEstateSelector (true);
@@ -186,6 +193,8 @@ void PropertyTab::copyReportPattern ()
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
+    db->open();
+
     QSqlQuery query (*db);
     query.prepare("SELECT ueberschrift, deckblatt FROM ReportPatterns WHERE id = 3");
     query.exec ();
@@ -199,6 +208,7 @@ void PropertyTab::copyReportPattern ()
         content = query.value(1).toString();
 
         //add wildcards for current year
+        query.clear();
         query.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
         query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
         query.exec();
@@ -211,6 +221,7 @@ void PropertyTab::copyReportPattern ()
         }
     }
 
+    query.clear();
     query.prepare("UPDATE Eigentuemerversammlungen SET Protokollvorlage =:vorlage, Protokollueberschrift =:vorlagenTyp WHERE obj_id = :id AND wi_jahr =:year AND etv_nr = :etvNum");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
     query.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -219,6 +230,8 @@ void PropertyTab::copyReportPattern ()
     query.bindValue(":vorlagenTyp", type);
 
     query.exec ();
+
+    db->close();
   }
   else
     QMessageBox::information(this, "Fehler", "Interner Fehler: Deckblattvorlage kann nicht geladen werden.");
@@ -226,7 +239,9 @@ void PropertyTab::copyReportPattern ()
 
 void PropertyTab::updateInfoBox()
 {
-  QSqlQuery query (*Database::getInstance()->getDatabase());
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
+  db->open();
+  QSqlQuery query (*db);
 
   //get common data
   query.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
@@ -256,6 +271,7 @@ void PropertyTab::updateInfoBox()
   }
 
   //get advisers
+  query.clear();
   query.prepare("SELECT Beirat_Vorsitz, Beirat_Mitglied1, Beirat_Mitglied2 FROM Beiratsmitglieder WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
   query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
   query.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -274,6 +290,7 @@ void PropertyTab::updateInfoBox()
   }
 
   //get data etv
+  query.clear();
   query.prepare("SELECT obj_id, wi_jahr, etv_nr, etv_datum, etv_uhrzeit, etv_ort FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
   query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
   query.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -299,15 +316,16 @@ void PropertyTab::updateInfoBox()
   }
 
   ui->infoBox->setText(dump);
+  db->close();
 }
 
 void PropertyTab::updatePropertyNameBox ()
 {
     //get current property name
     /*QSqlQuery query (*Database::getInstance()->getDatabase());
-    query.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
+    Database::getInstance()->getDatabase()->open(); query.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-    query.exec();
+    Database::getInstance()->getDatabase()->close();
 
     QSqlQueryModel *model = new QSqlQueryModel;
     model->setQuery(query);
@@ -317,33 +335,38 @@ void PropertyTab::updatePropertyNameBox ()
 
 void PropertyTab::updateYearBox()
 {
-    QSqlQuery query (*Database::getInstance()->getDatabase());
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
+  db->open();
+  QSqlQuery query (*db);
 
-    //get years
-    query.prepare("SELECT DISTINCT wi_jahr FROM Eigentuemerversammlungen WHERE obj_id = :id ORDER BY wi_jahr DESC");
-    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-    query.exec();
+  //get years
+  query.prepare("SELECT DISTINCT wi_jahr FROM Eigentuemerversammlungen WHERE obj_id = :id ORDER BY wi_jahr DESC");
+  query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+  query.exec();
 
-    QSqlQueryModel *model = new QSqlQueryModel;
-    model->setQuery(query);
-    ui->years->setModel(model);
+  QSqlQueryModel *model = new QSqlQueryModel;
+  model->setQuery(query);
+  ui->years->setModel(model);
 
-    //Database::getInstance()->setCurrentYear(ui->years->currentText().toInt());
+  db->close();
 }
 
 void PropertyTab::updateEtvBox()
 {
-    QSqlQuery query (*Database::getInstance()->getDatabase());
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
+  db->open();
+  QSqlQuery query (*db);
 
-    //get etvs
-    query.prepare("SELECT etv_nr FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year ORDER BY etv_nr DESC");
-    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-    query.bindValue(":year", Database::getInstance()->getCurrentYear());
-    query.exec();
+  //get etvs
+  query.prepare("SELECT etv_nr FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year ORDER BY etv_nr DESC");
+  query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+  query.bindValue(":year", Database::getInstance()->getCurrentYear());
+  query.exec();
 
-    QSqlQueryModel *model = new QSqlQueryModel;
-    model->setQuery(query);
-    ui->etvs->setModel(model);
+  QSqlQueryModel *model = new QSqlQueryModel;
+  model->setQuery(query);
+  ui->etvs->setModel(model);
+  db->close();
 }
 
 void PropertyTab::on_newAgenda_clicked()
@@ -358,9 +381,12 @@ void PropertyTab::on_newAgenda_clicked()
   }
   else
   {
-    if (Database::getInstance()->dbIsOk())
+    QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+    if (db)
     {
-      QSqlQuery query (*Database::getInstance()->getDatabase());
+      db->open();
+      QSqlQuery query (*db);
       //set values
       query.prepare("INSERT INTO Eigentuemerversammlungen (obj_id, wi_jahr, etv_nr, etv_datum, etv_uhrzeit, etv_ort) VALUES (:id, :year, :etvnum, :etvdate, :etvtime, :etvloc)");
       query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -370,6 +396,8 @@ void PropertyTab::on_newAgenda_clicked()
       query.bindValue(":etvtime", newSettings.getEtvTime().toString("hh:mm"));
       query.bindValue(":etvloc", newSettings.getEtvLocation());
       query.exec();
+
+      db->close();
 
       refreshOnSelected ();
       copyReportPattern ();
@@ -382,9 +410,12 @@ void PropertyTab::checkAdvisers (int aPropertyId, int aYear, int aEtvNum)
 {
   if (1 == aEtvNum)
   {
-    if (Database::getInstance()->dbIsOk())
+    QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+    if (0 != db)
     {
-      QSqlQuery query (*Database::getInstance()->getDatabase());
+      db->open();
+      QSqlQuery query (*db);
 
       //select advisers of 1st etv from the year before
       query.prepare("SELECT * FROM Beiratsmitglieder WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = 1");
@@ -433,6 +464,7 @@ void PropertyTab::checkAdvisers (int aPropertyId, int aYear, int aEtvNum)
 
           updateInfoBox();
       }
+      db->close();
     }
   }
 }
@@ -451,58 +483,68 @@ void PropertyTab::on_etvs_currentTextChanged(const QString &arg1)
 
 void PropertyTab::on_changeAgendaSettings_clicked()
 {
-  QSqlQuery query (*Database::getInstance()->getDatabase());
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
 
-  AgendaSettings newSettings (this);
-
-  //get years
-  query.prepare("SELECT * FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
-  query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-  query.bindValue(":year", Database::getInstance()->getCurrentYear());
-  query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
-  query.exec();
-
-  if (query.next())
+  if (0 != db)
   {
-    //causes trouble. todo: update relevant tables to do year or etv# change
-    newSettings.disableYearSetting(true);
-    newSettings.disableEtvNumSetting(true);
+    db->open();
 
-    newSettings.setEtvNum (query.value(2).toInt());
-    newSettings.setEtvLocation (query.value(5).toString());
-    QDate date = QDate::fromString(query.value(3).toString(),"dd.MM.yyyy");
-    newSettings.setEtvDate (date);
+    QSqlQuery query (*db);
 
-    QTime time = QTime::fromString(query.value(4).toString(), "hh:mm");
-    newSettings.setEtvTime (time);
-  }
+    AgendaSettings newSettings (this);
 
-  newSettings.setYear (Database::getInstance()->getCurrentYear());
+    //get years
+    query.prepare("SELECT * FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
+    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+    query.bindValue(":year", Database::getInstance()->getCurrentYear());
+    query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
+    query.exec();
 
-  //abort -> do not save settings
-  if (newSettings.exec() != QDialog::Accepted)
-  {
+    if (query.next())
+    {
+      //causes trouble. todo: update relevant tables to do year or etv# change
+      newSettings.disableYearSetting(true);
+      newSettings.disableEtvNumSetting(true);
+
+      newSettings.setEtvNum (query.value(2).toInt());
+      newSettings.setEtvLocation (query.value(5).toString());
+      QDate date = QDate::fromString(query.value(3).toString(),"dd.MM.yyyy");
+      newSettings.setEtvDate (date);
+
+      QTime time = QTime::fromString(query.value(4).toString(), "hh:mm");
+      newSettings.setEtvTime (time);
+    }
+
+    newSettings.setYear (Database::getInstance()->getCurrentYear());
+
+    db->close();
+
+    //abort -> do not save settings
+    if (newSettings.exec() != QDialog::Accepted)
+    {
       return;
-  }
-  else
-  {
-      if (Database::getInstance()->dbIsOk())
-      {
-          QSqlQuery query (*Database::getInstance()->getDatabase());
-          //set values
-          query.prepare("UPDATE Eigentuemerversammlungen SET wi_jahr = :newYear, etv_nr = :newEtvNum, etv_datum = :etvdate, etv_uhrzeit = :etvtime, etv_ort = :etvloc WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
-          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query.bindValue(":year", Database::getInstance()->getCurrentYear());
-          query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
-          query.bindValue(":newYear", newSettings.getYear());
-          query.bindValue(":newEtvNum", newSettings.getEtvNum());
-          query.bindValue(":etvdate", newSettings.getEtvDate().toString("dd.MM.yyyy"));
-          query.bindValue(":etvtime", newSettings.getEtvTime().toString("hh:mm"));
-          query.bindValue(":etvloc", newSettings.getEtvLocation());
-          query.exec();
+    }
+    else
+    {
+      db->open();
+      query.clear();
 
-          refreshOnSelected ();
-      }
+      //set values
+      query.prepare("UPDATE Eigentuemerversammlungen SET wi_jahr = :newYear, etv_nr = :newEtvNum, etv_datum = :etvdate, etv_uhrzeit = :etvtime, etv_ort = :etvloc WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":newYear", newSettings.getYear());
+      query.bindValue(":newEtvNum", newSettings.getEtvNum());
+      query.bindValue(":etvdate", newSettings.getEtvDate().toString("dd.MM.yyyy"));
+      query.bindValue(":etvtime", newSettings.getEtvTime().toString("hh:mm"));
+      query.bindValue(":etvloc", newSettings.getEtvLocation());
+      query.exec();
+
+      db->close();
+
+      refreshOnSelected ();
+    }
   }
 }
 
@@ -533,6 +575,7 @@ void PropertyTab::on_editAdvisers_clicked()
 
   if (0 != db)
   {
+    db->open();
     QSqlQuery query (*db);
 
     //get years
@@ -552,48 +595,50 @@ void PropertyTab::on_editAdvisers_clicked()
         dialog.setAdviser2 (query.value(2).toString ());
     }
 
+    db->close();
+
     if (dialog.exec() != QDialog::Accepted)
     {
         return;
     }
     else
     {
-        if (Database::getInstance()->dbIsOk())
-        {
-            QSqlQuery query (*db);
+      db->open();
+      query.clear();
 
-            if (noAdviserSet == false)
-            {
-              //update values
-              query.prepare("UPDATE Beiratsmitglieder SET Beirat_Vorsitz = :vorsitz, Beirat_Mitglied1 = :mitglied1, Beirat_Mitglied2 = :mitglied2 WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
-              query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-              query.bindValue(":year", Database::getInstance()->getCurrentYear());
-              query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
-              query.bindValue(":vorsitz", dialog.getAdviserPresident());
-              query.bindValue(":mitglied1", dialog.getAdviser1());
-              query.bindValue(":mitglied2", dialog.getAdviser2());
-              query.exec();
-            }
-            else
-            {
-              //set values
-              query.prepare("INSERT INTO Beiratsmitglieder (obj_id, wi_jahr, etv_nr, Beirat_Vorsitz, Beirat_Mitglied1, Beirat_Mitglied2) VALUES (:id, :year, :etvNum, :vorsitz, :mitglied1, :mitglied2)");
-              query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-              query.bindValue(":year", Database::getInstance()->getCurrentYear());
-              query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
-              query.bindValue(":vorsitz", dialog.getAdviserPresident());
-              query.bindValue(":mitglied1", dialog.getAdviser1());
-              query.bindValue(":mitglied2", dialog.getAdviser2());
-              query.exec();
-            }
+      if (noAdviserSet == false)
+      {
+        //update values
+        query.prepare("UPDATE Beiratsmitglieder SET Beirat_Vorsitz = :vorsitz, Beirat_Mitglied1 = :mitglied1, Beirat_Mitglied2 = :mitglied2 WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
+        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+        query.bindValue(":year", Database::getInstance()->getCurrentYear());
+        query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
+        query.bindValue(":vorsitz", dialog.getAdviserPresident());
+        query.bindValue(":mitglied1", dialog.getAdviser1());
+        query.bindValue(":mitglied2", dialog.getAdviser2());
+        query.exec();
+      }
+      else
+      {
+        //set values
+        query.prepare("INSERT INTO Beiratsmitglieder (obj_id, wi_jahr, etv_nr, Beirat_Vorsitz, Beirat_Mitglied1, Beirat_Mitglied2) VALUES (:id, :year, :etvNum, :vorsitz, :mitglied1, :mitglied2)");
+        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+        query.bindValue(":year", Database::getInstance()->getCurrentYear());
+        query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
+        query.bindValue(":vorsitz", dialog.getAdviserPresident());
+        query.bindValue(":mitglied1", dialog.getAdviser1());
+        query.bindValue(":mitglied2", dialog.getAdviser2());
+        query.exec();
+      }
 
-            updateInfoBox();
+      db->close();
 
-            //update string replacement class
-            StringReplacer::getInstance()->addPair("%BeiratVorsitz%", dialog.getAdviserPresident());
-            StringReplacer::getInstance()->addPair("%BeiratMitglied1%", dialog.getAdviser1());
-            StringReplacer::getInstance()->addPair("%BeiratMitglied2%", dialog.getAdviser2());
-        }
+      updateInfoBox();
+
+      //update string replacement class
+      StringReplacer::getInstance()->addPair("%BeiratVorsitz%", dialog.getAdviserPresident());
+      StringReplacer::getInstance()->addPair("%BeiratMitglied1%", dialog.getAdviser1());
+      StringReplacer::getInstance()->addPair("%BeiratMitglied2%", dialog.getAdviser2());
     }
   }
 }

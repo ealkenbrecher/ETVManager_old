@@ -43,29 +43,31 @@ void AgendaItemSettings::setItemType (int aType)
 
 void AgendaItemSettings::refresh ()
 {
-    //load patterns
-    if (Database::getInstance()->dbIsOk())
+  //load patterns
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+  if (0 != db)
+  {
+    //verfuegbare Vorlagen aus Datenbank holen
+    db->open();
+    QSqlQuery query (*db);
+    query.prepare("SELECT bezeichnung, id from AgendaPatterns ORDER BY bezeichnung ASC");
+    query.exec();
+
+    m_model = new QSqlQueryModelRichtext ();
+
+    if(query.isActive())
     {
-        //verfuegbare Vorlagen aus Datenbank holen
-        QSqlQuery query (*Database::getInstance()->getDatabase());
-        query.prepare("SELECT bezeichnung, id from AgendaPatterns ORDER BY bezeichnung ASC");
-        query.exec();
-
-        m_model = new QSqlQueryModelRichtext ();
-
-        if(query.isActive())
-        {
-            m_model->setQuery(query);
-            //Comboxbox mit Daten fuellen
-            ui->patterns->setModel(m_model);
-        }
-        else
-        {
-            qDebug() << "query is not active";
-        }
+      m_model->setQuery(query);
+      //Comboxbox mit Daten fuellen
+      ui->patterns->setModel(m_model);
     }
     else
-      qDebug() << "db error";
+    {
+      qDebug() << "query is not active";
+    }
+    db->close();
+  }
 }
 
 QString AgendaItemSettings::getHeader ()
@@ -143,6 +145,7 @@ void AgendaItemSettings::on_insertPattern_clicked()
     if (Database::getInstance()->dbIsOk())
     {
         //Liegenschaften aus Datenbank holen
+        Database::getInstance()->getDatabase()->open();
         QSqlQuery query (*Database::getInstance()->getDatabase());
         query.prepare("SELECT ueberschrift, beschreibung, beschlussvorschlag, beschlussvorschlag2, beschlussvorschlag3, beschlussArt from AgendaPatterns WHERE id=:patternId");
         query.bindValue(":patternId", patternId);
@@ -172,6 +175,7 @@ void AgendaItemSettings::on_insertPattern_clicked()
             else
               ui->ohneBeschlussoption->setChecked(true);
         }
+        Database::getInstance()->getDatabase()->close();
     }
     else
       qDebug() << "db error";
@@ -183,7 +187,8 @@ QString AgendaItemSettings::replaceWildcards (QString in)
   //check if the string contains any wildcards at all
   if (in.contains ("%"))
   {
-      //not very smart to do a database query here, but for now ok:
+      //not too smart to do a database query here, but for now ok:
+      Database::getInstance()->getDatabase()->open();
       QSqlQuery query (*Database::getInstance()->getDatabase());
 
       //get years
@@ -269,6 +274,8 @@ QString AgendaItemSettings::replaceWildcards (QString in)
       in.replace(QString("%BeiratVorsitz%"), "-");
       in.replace(QString("%BeiratMitglied1%"), "-");
       in.replace(QString("%BeiratMitglied2%"), "-");
+
+      Database::getInstance()->getDatabase()->close();
   }
   return in;
 }

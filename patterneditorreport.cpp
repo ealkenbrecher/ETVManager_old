@@ -28,6 +28,7 @@ void patternEditorReport::updatePatternTable()
   {
     if (Database::getInstance()->dbIsOk ())
     {
+      db->open();
       QSqlQuery query (*db);
       query.prepare("SELECT id, ueberschrift, deckblatt FROM ReportPatterns");
       query.exec();
@@ -43,6 +44,8 @@ void patternEditorReport::updatePatternTable()
       ui->tablePatterns->hideColumn(0);
       ui->tablePatterns->hideColumn(2);
       ui->tablePatterns->show();
+
+      db->close();
     }
   }
 }
@@ -83,6 +86,7 @@ void patternEditorReport::changePatternItemSettings (int aId)
   int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
   PatternEditorReportItemSettings itemSettings (this);
 
+  Database::getInstance()->getDatabase()->open();
   QSqlQuery query (*Database::getInstance()->getDatabase());
   query.prepare("SELECT ueberschrift, deckblatt FROM ReportPatterns WHERE id = :id");
 
@@ -95,6 +99,8 @@ void patternEditorReport::changePatternItemSettings (int aId)
     itemSettings.setBodyText(query.value(1).toString());
   }
 
+  Database::getInstance()->getDatabase()->close();
+
   //abort -> do not save settings
   if (itemSettings.exec() != QDialog::Accepted)
   {
@@ -104,12 +110,14 @@ void patternEditorReport::changePatternItemSettings (int aId)
   {
     if (Database::getInstance()->dbIsOk())
     {
+      Database::getInstance()->getDatabase()->open();
       QSqlQuery query (*Database::getInstance()->getDatabase());
       //set values
       query.prepare("UPDATE ReportPatterns SET deckblatt =:newBodyText WHERE id = :id");
       query.bindValue(":id", aId);
       query.bindValue(":newBodyText", itemSettings.getBodyText());
       query.exec();
+      Database::getInstance()->getDatabase()->close();
 
       updatePatternTable();
       ui->tablePatterns->setFocus();

@@ -29,6 +29,12 @@ void StringReplacer::addPair (const QString &rWildcard, const QString &rReplacem
 {
   if (mDb)
   {
+    if (!mDb->isOpen())
+    {
+      qDebug () << "StringReplacer::addPair: Db not open. This is a helper method. Open db in caller before using.";
+      return;
+    }
+
     QSqlQuery query (*mDb);
 
     //get values
@@ -57,6 +63,7 @@ void StringReplacer::addPair (const QString &rWildcard, const QString &rReplacem
     else
     {
       //set wildcard
+      query.clear();
       query.prepare("INSERT INTO Wildcards (obj_id, wi_jahr, etv_nr, wildcard, replacement) VALUES (:id, :year, :etvNum, :newWildcard, :newReplacement)");
       query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
       query.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -93,6 +100,12 @@ bool StringReplacer::getFromDb (QString *pRetVal, const QString &rWildcard)
   {
     if (mDb)
     {
+      if (!mDb->isOpen())
+      {
+        qDebug () << "StringReplacer::addPair: Db not open. This is a helper method. Open db in caller before using.";
+        return false;
+      }
+
       QSqlQuery query (*mDb);
 
       //get values
@@ -119,6 +132,12 @@ bool StringReplacer::getFromCommon (QString *pRetVal, const QString &rWildcard)
   {
     if (mDb)
     {
+      if (!mDb->isOpen())
+      {
+        qDebug () << "StringReplacer::addPair: Db not open. This is a helper method. Open db in caller before using.";
+        return false;
+      }
+
       QSqlQuery query (*mDb);
 
       //get values
@@ -145,6 +164,12 @@ void StringReplacer::findAndReplaceWildcards(QString *in)
   {
     if (mDb)
     {
+      if (!mDb->isOpen())
+      {
+        qDebug () << "StringReplacer::addPair: Db not open. This is a helper method. Open db in caller before using.";
+        return;
+      }
+
       QSqlQuery query (*mDb);
 
       //get values
@@ -179,6 +204,12 @@ const QString StringReplacer::findAndReplaceWildcards (QString in)
 
   if (mDb)
   {
+    if (!mDb->isOpen())
+    {
+      qDebug () << "StringReplacer::addPair: Db not open. This is a helper method. Open db in caller before using.";
+      return in;
+    }
+
     QSqlQuery query (*mDb);
 
     //get values

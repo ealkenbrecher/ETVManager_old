@@ -56,6 +56,7 @@ void DecissionLibraryTab::updateAgendaTable ()
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
+    Database::getInstance()->getDatabase()->open();
     QSqlQuery query (*db);
     query.prepare("SELECT top_id, header FROM Beschluesse WHERE beschlussArt IS NOT 2 AND obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -71,6 +72,8 @@ void DecissionLibraryTab::updateAgendaTable ()
     ui->tableAgenda->setModel(mQueryModel);
     ui->tableAgenda->horizontalHeader()->resizeSection(0, 50);
     ui->tableAgenda->show();
+
+    db->close();
   }
 }
 
@@ -89,6 +92,7 @@ void DecissionLibraryTab::changeAgendaItemSettings (int aId)
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
+    Database::getInstance()->getDatabase()->open();
     QSqlQuery query (*db);
     query.prepare("SELECT beschlussArt, beschlusssammlungVermerke, beschlusssammlungGerichtsentscheidung, beschlusssammlungPlusBeschreibung, beschlussArt FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :top_id");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -105,12 +109,15 @@ void DecissionLibraryTab::changeAgendaItemSettings (int aId)
       editDlg.setAddDescriptionFlag (query.value(3).toBool());
       editDlg.setVoteType (query.value(4).toInt());
     }
+
+    Database::getInstance()->getDatabase()->close();
   }
 
   if (editDlg.exec() == QDialog::Accepted)
   {
     if (Database::getInstance()->dbIsOk())
     {
+      Database::getInstance()->getDatabase()->open();
       QSqlQuery query (*Database::getInstance()->getDatabase());
       //set values
       query.prepare("UPDATE Beschluesse SET beschlusssammlungVermerke =:beschlussVermerke, beschlusssammlungGerichtsentscheidung =:beschlussGericht, beschlusssammlungPlusBeschreibung =:plusBeschreibung WHERE obj_id = :id AND wi_jahr = :year AND top_id = :topid AND etv_nr = :etvnum");
@@ -123,6 +130,7 @@ void DecissionLibraryTab::changeAgendaItemSettings (int aId)
       query.bindValue(":plusBeschreibung", editDlg.getAddDescriptionFlag());
 
       query.exec();
+      Database::getInstance()->getDatabase()->close();
 
       updateAgendaTable();
       ui->tableAgenda->setFocus();

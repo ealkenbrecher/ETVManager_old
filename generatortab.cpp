@@ -61,163 +61,165 @@ QString GeneratorTab::generateProcurationAsPdf (const QString &rFilePath)
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
-      QSqlQuery query (*Database::getInstance()->getDatabase());
+    Database::getInstance()->getDatabase()->open();
+    QSqlQuery query (*Database::getInstance()->getDatabase());
 
-      //get years
-      query.prepare("SELECT * FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
-      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-      query.bindValue(":year", Database::getInstance()->getCurrentYear());
-      query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
-      query.exec();
+    //get years
+    query.prepare("SELECT * FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
+    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+    query.bindValue(":year", Database::getInstance()->getCurrentYear());
+    query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
+    query.exec();
 
-      QString text;
-      QTextDocument* doc = new QTextDocument ();
-      QTextCursor cursor (doc);
-      QTextTableFormat tableFormat;
-      setTableFormat (&tableFormat);
+    QString text;
+    QTextDocument* doc = new QTextDocument ();
+    QTextCursor cursor (doc);
+    QTextTableFormat tableFormat;
+    setTableFormat (&tableFormat);
 
-      while (query.next())
+    while (query.next())
+    {
+      //insert header text
+      cursor.movePosition(QTextCursor::End);
+
+      cursor.insertHtml (StringReplacer::getInstance()->getReplacementString("%vollmachtHeader%"));
+      cursor.insertHtml ("<br>");
+
+      cursor.insertTable (3, 1, tableFormat);
+      cursor.insertHtml("<b>V O L L M A C H T</b>");
+      cursor.movePosition(QTextCursor::NextRow);
+      cursor.insertText("Eigentümerversammlung ");
+      cursor.insertText(query.value(2).toString());
+      cursor.insertText("/");
+      cursor.insertText(query.value(1).toString());
+      cursor.insertText(" der WEG ");
+
+      QSqlQuery queryPropertyName (*Database::getInstance()->getDatabase());
+      //get current property name
+      queryPropertyName.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
+      queryPropertyName.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      queryPropertyName.exec();
+
+      if (queryPropertyName.next())
       {
-        //insert header text
-        cursor.movePosition(QTextCursor::End);
-
-        cursor.insertHtml (StringReplacer::getInstance()->getReplacementString("%vollmachtHeader%"));
-        cursor.insertHtml ("<br>");
-
-        cursor.insertTable (3, 1, tableFormat);
-        cursor.insertHtml("<b>V O L L M A C H T</b>");
-        cursor.movePosition(QTextCursor::NextRow);
-        cursor.insertText("Eigentümerversammlung ");
-        cursor.insertText(query.value(2).toString());
-        cursor.insertText("/");
-        cursor.insertText(query.value(1).toString());
-        cursor.insertText(" der WEG ");
-
-        QSqlQuery queryPropertyName (*Database::getInstance()->getDatabase());
-        //get current property name
-        queryPropertyName.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
-        queryPropertyName.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-        queryPropertyName.exec();
-
-        if (queryPropertyName.next())
-        {
-          cursor.insertText(queryPropertyName.value(1).toString());
-        }
-
-        cursor.insertHtml("<br>");
-        cursor.insertText("Datum: ");
-        cursor.insertText(query.value(3).toString());
-        cursor.insertHtml("<br>");
-        cursor.insertText("Uhrzeit: ");
-        cursor.insertText(query.value(4).toString());
-
-        cursor.movePosition(QTextCursor::NextRow);
-        cursor.insertText (StringReplacer::getInstance()->getReplacementString("%vollmachtBevollmaechtigter%"));
-        cursor.movePosition(QTextCursor::End);
-
-        cursor.insertHtml ("<br>");
+        cursor.insertText(queryPropertyName.value(1).toString());
       }
 
-      //insert agenda items
-      query.prepare("SELECT top_id, top_header, top_descr, top_vorschlag, top_vorschlag2, top_vorschlag3, beschlussArt FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
-      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-      query.bindValue(":year", Database::getInstance()->getCurrentYear());
-      query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-      query.exec();
+      cursor.insertHtml("<br>");
+      cursor.insertText("Datum: ");
+      cursor.insertText(query.value(3).toString());
+      cursor.insertHtml("<br>");
+      cursor.insertText("Uhrzeit: ");
+      cursor.insertText(query.value(4).toString());
 
-      while (query.next())
+      cursor.movePosition(QTextCursor::NextRow);
+      cursor.insertText (StringReplacer::getInstance()->getReplacementString("%vollmachtBevollmaechtigter%"));
+      cursor.movePosition(QTextCursor::End);
+
+      cursor.insertHtml ("<br>");
+    }
+
+    //insert agenda items
+    query.prepare("SELECT top_id, top_header, top_descr, top_vorschlag, top_vorschlag2, top_vorschlag3, beschlussArt FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
+    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+    query.bindValue(":year", Database::getInstance()->getCurrentYear());
+    query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+    query.exec();
+
+    while (query.next())
+    {
+      QString topNumber (query.value(0).toString());
+      QString topHeader (query.value(1).toString());
+      //QString topDescription (query.value(2).toString());
+      QString topSuggestion (query.value(3).toString());
+      QString topSuggestion2 (query.value(4).toString());
+      QString topSuggestion3 (query.value(5).toString());
+      int type (query.value(6).toInt());
+
+      QTextDocument htmlConverter;
+
+      htmlConverter.setHtml(topSuggestion);
+      QString topSuggestionPlain = htmlConverter.toPlainText();
+
+      htmlConverter.setHtml(topSuggestion2);
+      QString topSuggestion2Plain = htmlConverter.toPlainText();
+
+      htmlConverter.setHtml(topSuggestion3);
+      QString topSuggestion3Plain = htmlConverter.toPlainText();
+
+      //count needed rows for table
+      int neededRows = 8;
+      if ("" == topSuggestionPlain)
+        neededRows--;
+      if ("" == topSuggestion2Plain)
+        neededRows--;
+      if ("" == topSuggestion3Plain)
+        neededRows--;
+
+      cursor.movePosition(QTextCursor::End);
+      tableFormat.setHeaderRowCount(neededRows);
+      cursor.insertTable (neededRows, 1, tableFormat);
+
+      cursor.insertHtml("TOP ");
+      cursor.insertHtml(topNumber);
+      cursor.insertHtml(": ");
+      cursor.insertHtml(topHeader);
+
+      if ("" != topSuggestionPlain)
       {
-          QString topNumber (query.value(0).toString());
-          QString topHeader (query.value(1).toString());
-          //QString topDescription (query.value(2).toString());
-          QString topSuggestion (query.value(3).toString());
-          QString topSuggestion2 (query.value(4).toString());
-          QString topSuggestion3 (query.value(5).toString());
-          int type (query.value(6).toInt());
-
-          QTextDocument htmlConverter;
-
-          htmlConverter.setHtml(topSuggestion);
-          QString topSuggestionPlain = htmlConverter.toPlainText();
-
-          htmlConverter.setHtml(topSuggestion2);
-          QString topSuggestion2Plain = htmlConverter.toPlainText();
-
-          htmlConverter.setHtml(topSuggestion3);
-          QString topSuggestion3Plain = htmlConverter.toPlainText();
-
-          //count needed rows for table
-          int neededRows = 8;
-          if ("" == topSuggestionPlain)
-            neededRows--;
-          if ("" == topSuggestion2Plain)
-            neededRows--;
-          if ("" == topSuggestion3Plain)
-            neededRows--;
-
-          cursor.movePosition(QTextCursor::End);
-          tableFormat.setHeaderRowCount(neededRows);
-          cursor.insertTable (neededRows, 1, tableFormat);
-
-          cursor.insertHtml("TOP ");
-          cursor.insertHtml(topNumber);
-          cursor.insertHtml(": ");
-          cursor.insertHtml(topHeader);
-
-          if ("" != topSuggestionPlain)
-          {
-              cursor.movePosition(QTextCursor::NextRow);
-              cursor.insertHtml("[ ] Weisung gemäß Beschlussvorschlag");
-          }
-
-          if ("" != topSuggestion2Plain)
-          {
-              cursor.movePosition(QTextCursor::NextRow);
-              cursor.insertHtml("[ ] Weisung gemäß Beschlussvorschlag Alternative 1");
-          }
-
-          if ("" != topSuggestion3Plain)
-          {
-              cursor.movePosition(QTextCursor::NextRow);
-              cursor.insertHtml("[ ] Weisung gemäß Beschlussvorschlag Alternative 2");
-          }
-
           cursor.movePosition(QTextCursor::NextRow);
-
-          if (2 != type)
-            cursor.insertHtml("[ ] Weisung gemäß folgendem Wortlaut:");
-          else
-            cursor.insertHtml("Anmerkung:<br>");
-
-          //cursor.insertHtml("<hr><br><hr>");
-
-          cursor.movePosition(QTextCursor::End);
-          cursor.insertHtml ("<br>");
+          cursor.insertHtml("[ ] Weisung gemäß Beschlussvorschlag");
       }
 
-      cursor.insertTable (4, 1, tableFormat);
-      cursor.insertHtml ("Datum:");
+      if ("" != topSuggestion2Plain)
+      {
+          cursor.movePosition(QTextCursor::NextRow);
+          cursor.insertHtml("[ ] Weisung gemäß Beschlussvorschlag Alternative 1");
+      }
+
+      if ("" != topSuggestion3Plain)
+      {
+          cursor.movePosition(QTextCursor::NextRow);
+          cursor.insertHtml("[ ] Weisung gemäß Beschlussvorschlag Alternative 2");
+      }
+
       cursor.movePosition(QTextCursor::NextRow);
-      cursor.insertHtml ("Wohnung Nr.:");
-      cursor.movePosition(QTextCursor::NextRow);
-      cursor.insertHtml ("Eigentümername (Druckbuchstaben):");
-      cursor.movePosition(QTextCursor::NextRow);
-      cursor.insertHtml ("Unterschrift:");
 
-      QPrinter printer(QPrinter::HighResolution);
-      printer.setPageSize(QPrinter::A4);
-      printer.setOutputFormat(QPrinter::PdfFormat);
+      if (2 != type)
+        cursor.insertHtml("[ ] Weisung gemäß folgendem Wortlaut:");
+      else
+        cursor.insertHtml("Anmerkung:<br>");
 
-      QFileDialog fileDialog;
-      fileDialog.setDirectory(rFilePath);
-      QString file = fileDialog.getSaveFileName(this, tr("Speichern als PDF"), "/tmp/Vollmacht.pdf", tr("PDF Datei (*.pdf)"));
+      //cursor.insertHtml("<hr><br><hr>");
 
-      printer.setOutputFileName(file);
+      cursor.movePosition(QTextCursor::End);
+      cursor.insertHtml ("<br>");
+    }
 
-      doc->print(&printer);
-      delete doc;
+    cursor.insertTable (4, 1, tableFormat);
+    cursor.insertHtml ("Datum:");
+    cursor.movePosition(QTextCursor::NextRow);
+    cursor.insertHtml ("Wohnung Nr.:");
+    cursor.movePosition(QTextCursor::NextRow);
+    cursor.insertHtml ("Eigentümername (Druckbuchstaben):");
+    cursor.movePosition(QTextCursor::NextRow);
+    cursor.insertHtml ("Unterschrift:");
 
-      return QFileInfo(file).path();
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setPageSize(QPrinter::A4);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+
+    QFileDialog fileDialog;
+    fileDialog.setDirectory(rFilePath);
+    QString file = fileDialog.getSaveFileName(this, tr("Speichern als PDF"), "/tmp/Vollmacht.pdf", tr("PDF Datei (*.pdf)"));
+
+    printer.setOutputFileName(file);
+
+    doc->print(&printer);
+    delete doc;
+
+    return QFileInfo(file).path();
+    Database::getInstance()->getDatabase()->close();
   }
   return "";
 }
@@ -227,7 +229,8 @@ QString GeneratorTab::generateAgendaAsPdf (const QString &rFilePath)
     QSqlDatabase* db = Database::getInstance()->getDatabase();
     if (0 != db)
     {
-        QSqlQuery query (*Database::getInstance()->getDatabase());
+        Database::getInstance()->getDatabase()->open();
+        QSqlQuery query (*db);
 
         //get years
         query.prepare("SELECT * FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
@@ -371,6 +374,8 @@ QString GeneratorTab::generateAgendaAsPdf (const QString &rFilePath)
         delete doc;
 
         return QFileInfo(file).path();
+
+        Database::getInstance()->getDatabase()->close();
     }
   return "";
 }
@@ -380,7 +385,8 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
-      QSqlQuery query (*Database::getInstance()->getDatabase());
+      db->open();
+      QSqlQuery query (*db);
 
       //get years
       query.prepare("SELECT * FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
@@ -407,7 +413,7 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           cursor.movePosition(QTextCursor::NextRow);
           cursor.insertText("Der WEG ");
 
-          QSqlQuery query2 (*Database::getInstance()->getDatabase());
+          QSqlQuery query2 (*db);
           //get current property name
           query2.prepare("SELECT * FROM Objekt WHERE obj_id = :id");
           query2.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -426,6 +432,7 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
           cursor.insertText("\n\n");
 
           //get report cover page
+          query2.clear();
           query2.prepare("SELECT Protokollvorlage FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr =:year AND etv_nr =:etvNum");
           query2.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
           query2.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -560,9 +567,9 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
       }
 
       cursor.insertText("Die Richtigkeit und Vollständigkeit des Protokolls wurde geprüft durch folgende zur Versammlung anwesende Personen:\n\n");
-      cursor.insertText("Unterschrift Miteigentümer 1: _______________________, Name in Druckbuchstaben: _______________________\n\n");
-      cursor.insertText("Unterschrift Miteigentümer 2: _______________________, Name in Druckbuchstaben: _______________________\n\n");
-      cursor.insertText("Unterschrift Miteigentümer 3: _______________________, Name in Druckbuchstaben: _______________________\n\n");
+      cursor.insertText("Unterschrift Miteigentümer 1: _______________________, Name in Druckbuchstaben: _______________________\n\n\n");
+      cursor.insertText("Unterschrift Miteigentümer 2: _______________________, Name in Druckbuchstaben: _______________________\n\n\n");
+      cursor.insertText("Unterschrift Miteigentümer 3: _______________________, Name in Druckbuchstaben: _______________________\n\n\n");
       cursor.insertText("Unterschrift Versammlungsleiter: _______________________");
 
       QPrinter printer(QPrinter::HighResolution);
@@ -577,6 +584,8 @@ QString GeneratorTab::generateReportTemplateAsPdf (const QString &rFilePath)
       doc->print(&printer);
       delete doc;
 
+      Database::getInstance()->getDatabase()->close();
+
       return QFileInfo(file).path();
   }
   return "";
@@ -587,7 +596,8 @@ QString GeneratorTab::generateReportTranscriptAsPdf (const QString &rFilePath)
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
-      QSqlQuery query (*Database::getInstance()->getDatabase());
+      db->open();
+      QSqlQuery query (*db);
 
       //get years
       query.prepare("SELECT * FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
@@ -801,6 +811,7 @@ QString GeneratorTab::generateReportTranscriptAsPdf (const QString &rFilePath)
       counter++;
     }
 
+    db->close();
 
     QPrinter printer(QPrinter::HighResolution);
     printer.setPageSize(QPrinter::A4);
@@ -823,8 +834,15 @@ QString GeneratorTab::generateDecissionLibraryAsPdf (const QString &rFilePath)
 {
   WizardDialogBox dialog (this, 0, eSimpleDialog);
   dialog.setTitle (QString("Beschlusssammlung Startnummer"));
-  QString dialogText (StringReplacer::getInstance()->getReplacementString("%beschlusssammlungStartNummer%"));
-  dialog.setDialogText(dialogText);
+
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
+  if (0 != db)
+  {
+    db->open();
+    QString dialogText (StringReplacer::getInstance()->getReplacementString("%beschlusssammlungStartNummer%"));
+    dialog.setDialogText(dialogText);
+    db->close();
+  }
 
   int startNumber = 0;
   if (QDialog::Accepted == dialog.exec())
@@ -833,15 +851,16 @@ QString GeneratorTab::generateDecissionLibraryAsPdf (const QString &rFilePath)
     startNumber = value.toInt();
 
     // get decissions
-    QSqlDatabase* db = Database::getInstance()->getDatabase();
+
     if (0 != db)
     {
+      db->open();
       QString text ("");
       QTextDocument* doc = new QTextDocument ();
       QTextCursor cursor (doc);
 
       //insert agenda items
-      QSqlQuery query (*Database::getInstance()->getDatabase());
+      QSqlQuery query (*db);
       query.prepare("SELECT * FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND beschlussArt <= 1");
       query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
       query.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -929,7 +948,7 @@ QString GeneratorTab::generateDecissionLibraryAsPdf (const QString &rFilePath)
           cursor.insertTable(1, 2, tableFormat);
 
           //get date of etv
-          QSqlQuery query2 (*Database::getInstance()->getDatabase());
+          QSqlQuery query2 (*db);
           query2.prepare("SELECT obj_id, wi_jahr, etv_nr, etv_datum, etv_uhrzeit, etv_ort FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
           query2.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
           query2.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -967,6 +986,8 @@ QString GeneratorTab::generateDecissionLibraryAsPdf (const QString &rFilePath)
         }
       }
 
+      db->close();
+
       //save file
       QPrinter printer(QPrinter::HighResolution);
       printer.setPageSize(QPrinter::A4);
@@ -988,36 +1009,42 @@ QString GeneratorTab::generateDecissionLibraryAsPdf (const QString &rFilePath)
 
 QString GeneratorTab::replaceCoverPageTagsByUnderscore (QString in)
 {
-    //check if the string may at all contain any wildcards
-    if (in.contains ("%"))
+  //check if the string may at all contain any wildcards
+  if (in.contains ("%"))
+  {
+    if (!Database::getInstance()->getDatabase()->isOpen())
     {
-        QSqlQuery query (*Database::getInstance()->getDatabase());
-
-        //get years
-        query.prepare("SELECT obj_mea FROM Objekt WHERE obj_id = :id");
-        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-        query.exec();
-
-        while (query.next())
-          in.replace("%MEAgesamt%", query.value(0).toString());
-
-        in.replace("%DatumEinladungsschreiben%", "_________");
-        in.replace("%UhrzeitStartVersammlung%", "_________");
-        in.replace("%UhrzeitEndeVersammlung%", "_________");
-        in.replace("%BeschlussfaehigMarker%", "  ");
-        in.replace("%MEAAnwesend%", "_________");
-        in.replace("%Versammlungsleiter%", "__________________");
-        in.replace("%VersammlungsleiterFktVerwalterMarker%", "  ");
-        in.replace("%VersammlungsleiterFktMitarbeiterMarker%", "  ");
-        in.replace("%VersammlungsleiterFktWEGMarker%", "  ");
-        in.replace("%Protokollfuehrung%", "__________________");
-        in.replace("%ProtokollfuehrerFktChef%", "  ");
-        in.replace("%ProtokollfuehrerFktMitarbeiter%", "  ");
-        in.replace("%ProtokollfuehrerFktWEG%", "  ");
-        in.replace("%Abstimmungsregelung%", "__________________");
-        in.replace("%Einladungsfrist%", "_________");
+      qDebug () << "GeneratorTab::replaceCoverPageTagsByUnderscore: db is not opened! \nThis is a helper - Open db in caller before using.";
+      return in;
     }
-    return in;
+    QSqlQuery query (*Database::getInstance()->getDatabase());
+
+    //get years
+    query.prepare("SELECT obj_mea FROM Objekt WHERE obj_id = :id");
+    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+    query.exec();
+
+    while (query.next())
+      in.replace("%MEAgesamt%", query.value(0).toString());
+
+    in.replace("%DatumEinladungsschreiben%", "_________");
+    in.replace("%UhrzeitStartVersammlung%", "_________");
+    in.replace("%UhrzeitEndeVersammlung%", "_________");
+    in.replace("%BeschlussfaehigMarker%", "  ");
+    in.replace("%MEAAnwesend%", "_________");
+    in.replace("%Versammlungsleiter%", "__________________");
+    in.replace("%VersammlungsleiterFktVerwalterMarker%", "  ");
+    in.replace("%VersammlungsleiterFktMitarbeiterMarker%", "  ");
+    in.replace("%VersammlungsleiterFktWEGMarker%", "  ");
+    in.replace("%Protokollfuehrung%", "__________________");
+    in.replace("%ProtokollfuehrerFktChef%", "  ");
+    in.replace("%ProtokollfuehrerFktMitarbeiter%", "  ");
+    in.replace("%ProtokollfuehrerFktWEG%", "  ");
+    in.replace("%Abstimmungsregelung%", "__________________");
+    in.replace("%Einladungsfrist%", "_________");
+  }
+
+  return in;
 }
 
 void GeneratorTab::on_doPdf_clicked()

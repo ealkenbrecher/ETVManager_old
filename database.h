@@ -11,7 +11,6 @@ public:
     void setDatabase (QSqlDatabase* pDb);
     QSqlDatabase* getDatabase ();
 
-
     //does not really belong here (to lazy to move this somewhere else and it does its job)
     int getCurrentPropertyId ();
     void setCurrentPropertyId (int aId);
@@ -21,6 +20,7 @@ public:
     void setCurrentYear (int aYear);
     //const QString getTextPattern (eTextPattern aId);
     bool dbIsOk ();
+    void execQuery (QSqlQuery* query);
 
 protected:
     QSqlDatabase* mDb;

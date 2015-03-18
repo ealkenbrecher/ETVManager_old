@@ -42,6 +42,8 @@ ReportGeneratorTab::~ReportGeneratorTab()
 
 void ReportGeneratorTab::refreshOnSelected ()
 {
+  qDebug () << "ReportGeneratorTab::refreshOnSelected ()";
+
   if (!this->isEnabled())
   {
     QMessageBox::information(this, "Fehler", "Alle Einstellungen deaktiviert.\nLegen Sie zunächst ein Wirtschaftsjahr und eine Eigentümerversammlung an");
@@ -67,6 +69,7 @@ void ReportGeneratorTab::updateAgendaTable ()
 
   if (0 != db)
   {
+    db->open();
     QString request ("SELECT top_id, header, protokoll_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr ORDER BY protokoll_id ASC");
     QSqlQuery query (*db);
     query.prepare(request);
@@ -84,6 +87,7 @@ void ReportGeneratorTab::updateAgendaTable ()
 
     ui->tableAgenda->hideColumn(2);
     ui->tableAgenda->show();
+    db->close();
   }
 }
 
@@ -92,19 +96,21 @@ void ReportGeneratorTab::updateReportTemplateTable ()
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
-      QSqlQuery query (*db);
-      query.prepare("SELECT Protokollueberschrift FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
-      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-      query.bindValue(":year", Database::getInstance()->getCurrentYear());
-      query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-      query.exec();
+    db->open();
+    QSqlQuery query (*db);
+    query.prepare("SELECT Protokollueberschrift FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
+    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+    query.bindValue(":year", Database::getInstance()->getCurrentYear());
+    query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+    query.exec();
 
-      mQueryModelReportTemplate = new QSqlQueryModelRichtext ();
-      mQueryModelReportTemplate->setQuery(query);
-      //mQueryModelReportTemplate->setHeaderData(0, Qt::Horizontal, tr("Bezeichnung"));
+    mQueryModelReportTemplate = new QSqlQueryModelRichtext ();
+    mQueryModelReportTemplate->setQuery(query);
+    //mQueryModelReportTemplate->setHeaderData(0, Qt::Horizontal, tr("Bezeichnung"));
 
-      ui->tableReportTemplate->setModel(mQueryModelReportTemplate);
-      ui->tableReportTemplate->show();
+    ui->tableReportTemplate->setModel(mQueryModelReportTemplate);
+    ui->tableReportTemplate->show();
+    db->close();
   }
 }
 
@@ -126,6 +132,7 @@ void ReportGeneratorTab::changeAgendaItemSettings (int aId)
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
+    db->open();
     QSqlQuery query (*db);
     query.prepare("SELECT * FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :topid");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -147,6 +154,9 @@ void ReportGeneratorTab::changeAgendaItemSettings (int aId)
       itemSettings.setAbsentionVotes            (query.value(11).toFloat());
       itemSettings.setType                      (query.value(12).toInt());
     }
+
+    db->close();
+
     //abort -> do not save settings
     if (itemSettings.exec() != QDialog::Accepted)
     {
@@ -154,31 +164,32 @@ void ReportGeneratorTab::changeAgendaItemSettings (int aId)
     }
     else
     {
-      if (Database::getInstance()->dbIsOk())
-      {
-        QSqlQuery query (*Database::getInstance()->getDatabase());
-        //set values
-        query.prepare("UPDATE Beschluesse SET header =:newHeader, descr =:newDescr, beschlussformulierung =:newBeschlussformulierung, abstimmergebnis =:newAbstimmergebnis, beschlusssammlungVermerke = :vermerke, stimmenJa =:ja, stimmenNein =:nein, stimmenEnthaltung =:enthaltung WHERE obj_id = :id AND wi_jahr = :year AND top_id = :topid AND etv_nr = :etvnum");
-        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-        query.bindValue(":year", Database::getInstance()->getCurrentYear());
-        query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
-        query.bindValue(":topid", aId);
-        query.bindValue(":newHeader", itemSettings.getHeader());
-        query.bindValue(":newDescr", itemSettings.getDescription());
-        query.bindValue(":newBeschlussformulierung", itemSettings.getDecissionText());
-        query.bindValue(":newAbstimmergebnis", itemSettings.getDecissionProclamation());
-        query.bindValue(":ja", itemSettings.getYesVotes());
-        query.bindValue(":nein", itemSettings.getNoVotes());
-        query.bindValue(":enthaltung", itemSettings.getAbsentionVotes());
-        query.bindValue(":vermerke", itemSettings.getDecissionProclamation());
-        //query.bindValue(":type", itemSettings.getType());
+      db->open();
+      query.clear();
 
-        query.exec();
+      //set values
+      query.prepare("UPDATE Beschluesse SET header =:newHeader, descr =:newDescr, beschlussformulierung =:newBeschlussformulierung, abstimmergebnis =:newAbstimmergebnis, beschlusssammlungVermerke = :vermerke, stimmenJa =:ja, stimmenNein =:nein, stimmenEnthaltung =:enthaltung WHERE obj_id = :id AND wi_jahr = :year AND top_id = :topid AND etv_nr = :etvnum");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":topid", aId);
+      query.bindValue(":newHeader", itemSettings.getHeader());
+      query.bindValue(":newDescr", itemSettings.getDescription());
+      query.bindValue(":newBeschlussformulierung", itemSettings.getDecissionText());
+      query.bindValue(":newAbstimmergebnis", itemSettings.getDecissionProclamation());
+      query.bindValue(":ja", itemSettings.getYesVotes());
+      query.bindValue(":nein", itemSettings.getNoVotes());
+      query.bindValue(":enthaltung", itemSettings.getAbsentionVotes());
+      query.bindValue(":vermerke", itemSettings.getDecissionProclamation());
+      //query.bindValue(":type", itemSettings.getType());
 
-        updateAgendaTable();
-        ui->tableAgenda->setFocus();
-        ui->tableAgenda->selectRow(selection);
-      }
+      query.exec();
+
+      updateAgendaTable();
+      ui->tableAgenda->setFocus();
+      ui->tableAgenda->selectRow(selection);
+
+      db->close();
     }
   }
 }
@@ -187,48 +198,61 @@ void ReportGeneratorTab::on_tableReportTemplate_doubleClicked(const QModelIndex 
 {
   PatternEditorReportItemSettings itemSettings (this);
 
-  QSqlQuery query (*Database::getInstance()->getDatabase());
-  query.prepare("SELECT Protokollueberschrift, Protokollabschrift FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
-  query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-  query.bindValue(":year", Database::getInstance()->getCurrentYear());
-  query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-  query.exec();
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
 
-  while (query.next())
+  if (0 != db)
   {
-    itemSettings.setPatternName(query.value(0).toString());
-    itemSettings.setBodyText(query.value(1).toString());
-  }
+    db->open();
+    QSqlQuery query (*db);
+    query.prepare("SELECT Protokollueberschrift, Protokollabschrift FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
+    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+    query.bindValue(":year", Database::getInstance()->getCurrentYear());
+    query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+    query.exec();
 
-  //abort -> do not save settings
-  if (itemSettings.exec() != QDialog::Accepted)
-  {
-      return;
-  }
-  else
-  {
-      if (Database::getInstance()->dbIsOk())
-      {
-          QSqlQuery query (*Database::getInstance()->getDatabase());
-          //set values
-          query.prepare("UPDATE Eigentuemerversammlungen SET Protokollabschrift =:newBodyText WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
-          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query.bindValue(":year", Database::getInstance()->getCurrentYear());
-          query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-          query.bindValue(":newBodyText", itemSettings.getBodyText());
-          query.exec();
+    while (query.next())
+    {
+      itemSettings.setPatternName(query.value(0).toString());
+      itemSettings.setBodyText(query.value(1).toString());
+    }
 
-          //updateReportTemplateTable();
-      }
+    db->close();
+
+    //abort -> do not save settings
+    if (itemSettings.exec() != QDialog::Accepted)
+    {
+        return;
+    }
+    else
+    {
+      db->open();
+      query.clear();
+
+      //set values
+      query.prepare("UPDATE Eigentuemerversammlungen SET Protokollabschrift =:newBodyText WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":newBodyText", itemSettings.getBodyText());
+      query.exec();
+
+      db->close();
+    }
   }
 }
 
 void ReportGeneratorTab::startAgendaWizard()
 {
-  if (Database::getInstance()->dbIsOk())
-  {
-    QSqlQuery query (*Database::getInstance()->getDatabase());
+  //this->blockSignals(true);
 
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+  if (0 != db)
+  {
+    db->open();
+    QSqlQuery query (*db);
+
+    query.clear();
     query.prepare("SELECT top_id, top_header, top_descr, top_vorschlag, top_vorschlag2, top_vorschlag3, beschlussArt FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
     query.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -244,7 +268,7 @@ void ReportGeneratorTab::startAgendaWizard()
     QString descr ("");
     int type = 0;
 
-    QSqlQuery query2 (*Database::getInstance()->getDatabase());
+    QSqlQuery query2 (*db);
     query2.prepare("SELECT obj_stimmrecht FROM Objekt WHERE obj_id = :id");
     query2.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
     query2.exec();
@@ -276,7 +300,7 @@ void ReportGeneratorTab::startAgendaWizard()
 
       //check for old decission ->
 
-      QSqlQuery queryOldDecission (*Database::getInstance()->getDatabase());
+      QSqlQuery queryOldDecission (*db);
       queryOldDecission.prepare("SELECT *  FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum AND top_id = :top_id");
       queryOldDecission.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
       queryOldDecission.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -302,9 +326,6 @@ void ReportGeneratorTab::startAgendaWizard()
       if ("" != sug3)
         dialog.setSuggestion3(sug3);
 
-      //get voting
-      //VotingDialog* votingDlg = new VotingDialog (this, votingType);
-
       //set old Values ->
       if (foundOldRecord)
       {
@@ -319,7 +340,7 @@ void ReportGeneratorTab::startAgendaWizard()
 
       if (QDialog::Accepted == retVal && -1 != top_id)
       {
-        QSqlQuery query3 (*Database::getInstance()->getDatabase());
+        QSqlQuery query3 (*db);
 
         //get cover page
         query3.prepare("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum AND top_id = :top_id");
@@ -362,14 +383,19 @@ void ReportGeneratorTab::startAgendaWizard()
         query3.exec ();
       }
     }
+    db->close();
   }
+  //this->blockSignals(false);
 }
 
 void ReportGeneratorTab::startCoverpageWizard()
 {
-  if (Database::getInstance()->dbIsOk())
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+  if (0 != db)
   {
-    QSqlQuery query (*Database::getInstance()->getDatabase());
+    db->open();
+    QSqlQuery query (*db);
 
     //get cover page
     query.prepare("SELECT Protokollvorlage FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
@@ -522,6 +548,7 @@ void ReportGeneratorTab::startCoverpageWizard()
     }
 
     //replace %Einladungsfrist%
+    query.clear();
     query.prepare("SELECT obj_inv_deadline FROM Objekt WHERE obj_id = :id");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
     query.exec();
@@ -554,6 +581,7 @@ void ReportGeneratorTab::startCoverpageWizard()
         coverPageText = StringReplacer::getInstance()->findAndReplaceWildcards(coverPageText);
 
         //set values
+        query.clear();
         query.prepare("UPDATE Eigentuemerversammlungen SET Protokollabschrift =:report WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum");
         query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
         query.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -562,6 +590,7 @@ void ReportGeneratorTab::startCoverpageWizard()
         query.exec();
       }
     }
+    db->close();
   }
 }
 
@@ -756,10 +785,13 @@ void ReportGeneratorTab::on_addEntry_clicked()
   //abort -> do not save settings
   if (dialog.exec() == QDialog::Accepted)
   {
-    if (Database::getInstance()->dbIsOk())
+    QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+    if (0 != db)
     {
+      db->open();
       //get highest id
-      QSqlQuery query (*Database::getInstance()->getDatabase());
+      QSqlQuery query (*db);
       query.prepare ("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum ORDER BY top_id DESC");
       query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
       query.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -773,6 +805,7 @@ void ReportGeneratorTab::on_addEntry_clicked()
 
       if (-1 != maxIndex)
       {
+        query.clear();
         query.prepare("INSERT INTO Beschluesse (obj_id, wi_jahr, etv_nr, top_id, protokoll_id, header, descr, beschlussArt) VALUES (:id, :year, :etvNum, :topid, :protokollid, :headerText, :description, :beschlussArt)");
         query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
         query.bindValue(":year", Database::getInstance()->getCurrentYear());
@@ -786,6 +819,7 @@ void ReportGeneratorTab::on_addEntry_clicked()
 
         updateAgendaTable();
       }
+      db->close();
     }
   }
 }
@@ -819,37 +853,45 @@ void ReportGeneratorTab::on_moveAgendaItemUp_clicked()
   }
   else
   {
-      if (Database::getInstance()->dbIsOk())
-      {
-          QSqlQuery query (*Database::getInstance()->getDatabase());
-          //set the id of the top before to -999
-          query.prepare("UPDATE Beschluesse SET protokoll_id = -999 WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id = :protokollid AND etv_nr = :etvnum");
-          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query.bindValue(":year", Database::getInstance()->getCurrentYear());
-          query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
-          query.bindValue(":protokollid", (protokoll_id - 1));
-          query.exec();
+    QSqlDatabase* db = Database::getInstance()->getDatabase();
 
-          //set the chosen top to the correct id
-          query.prepare("UPDATE Beschluesse SET protokoll_id = :protokollid_new WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id =:protokollid AND etv_nr = :etvnum");
-          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query.bindValue(":year", Database::getInstance()->getCurrentYear());
-          query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
-          query.bindValue(":protokollid", protokoll_id);
-          query.bindValue(":protokollid_new", protokoll_id-1);
-          query.exec();
+    if (0 != db)
+    {
+      db->open();
+      QSqlQuery query (*db);
+      //set the id of the top before to -999
+      query.clear();
+      query.prepare("UPDATE Beschluesse SET protokoll_id = -999 WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id = :protokollid AND etv_nr = :etvnum");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":protokollid", (protokoll_id - 1));
+      query.exec();
 
-          //set the '-999' topid to the correct topid
-          query.prepare("UPDATE Beschluesse SET protokoll_id = :protokollid WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id = -999 AND etv_nr = :etvnum");
-          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query.bindValue(":year", Database::getInstance()->getCurrentYear());
-          query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
-          query.bindValue(":protokollid", protokoll_id);
-          query.exec();
+      //set the chosen top to the correct id
+      query.clear();
+      query.prepare("UPDATE Beschluesse SET protokoll_id = :protokollid_new WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id =:protokollid AND etv_nr = :etvnum");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":protokollid", protokoll_id);
+      query.bindValue(":protokollid_new", protokoll_id-1);
+      query.exec();
 
-          updateAgendaTable();
-          ui->tableAgenda->selectRow(protokoll_id - 2);
-      }
+      //set the '-999' topid to the correct topid
+      query.clear();
+      query.prepare("UPDATE Beschluesse SET protokoll_id = :protokollid WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id = -999 AND etv_nr = :etvnum");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":protokollid", protokoll_id);
+      query.exec();
+
+      db->close();
+
+      updateAgendaTable();
+      ui->tableAgenda->selectRow(protokoll_id - 2);
+    }
   }
 }
 
@@ -863,36 +905,45 @@ void ReportGeneratorTab::on_moveAgendaItemDown_clicked()
     QMessageBox::information(this, "Fehler", "Beschluss kann nicht nach unten verschoben werden.");
   else
   {
-    if (Database::getInstance()->dbIsOk())
+    QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+    if (0 != db)
     {
-        QSqlQuery query (*Database::getInstance()->getDatabase());
-        //set the id of the top before to -999
-        query.prepare("UPDATE Beschluesse SET protokoll_id = -999 WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id = :protokollid AND etv_nr = :etvnum");
-        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-        query.bindValue(":year", Database::getInstance()->getCurrentYear());
-        query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
-        query.bindValue(":protokollid", (protokoll_id + 1));
-        query.exec();
+      db->open();
 
-        //set the chosen top to the correct id
-        query.prepare("UPDATE Beschluesse SET protokoll_id = :protokollid_new WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id =:protokollid AND etv_nr = :etvnum");
-        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-        query.bindValue(":year", Database::getInstance()->getCurrentYear());
-        query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
-        query.bindValue(":protokollid", protokoll_id);
-        query.bindValue(":protokollid_new", protokoll_id + 1);
-        query.exec();
+      QSqlQuery query (*db);
+      //set the id of the top before to -999
+      query.clear();
+      query.prepare("UPDATE Beschluesse SET protokoll_id = -999 WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id = :protokollid AND etv_nr = :etvnum");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":protokollid", (protokoll_id + 1));
+      query.exec();
 
-        //set the '-999' topid to the correct topid
-        query.prepare("UPDATE Beschluesse SET protokoll_id = :protokollid WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id = -999 AND etv_nr = :etvnum");
-        query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-        query.bindValue(":year", Database::getInstance()->getCurrentYear());
-        query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
-        query.bindValue(":protokollid", protokoll_id);
-        query.exec();
+      //set the chosen top to the correct id
+      query.clear();
+      query.prepare("UPDATE Beschluesse SET protokoll_id = :protokollid_new WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id =:protokollid AND etv_nr = :etvnum");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":protokollid", protokoll_id);
+      query.bindValue(":protokollid_new", protokoll_id + 1);
+      query.exec();
 
-        updateAgendaTable();
-        ui->tableAgenda->selectRow(protokoll_id);
+      //set the '-999' topid to the correct topid
+      query.clear();
+      query.prepare("UPDATE Beschluesse SET protokoll_id = :protokollid WHERE obj_id = :id AND wi_jahr = :year AND protokoll_id = -999 AND etv_nr = :etvnum");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvnum", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":protokollid", protokoll_id);
+      query.exec();
+
+      updateAgendaTable();
+      ui->tableAgenda->selectRow(protokoll_id);
+
+      db->close();
     }
   }
 }
@@ -904,12 +955,19 @@ void ReportGeneratorTab::on_deleteEntry_clicked()
     QMessageBox::StandardButton reply = QMessageBox::question(this, "Achtung", "Beschluss wirklich löschen?", QMessageBox::Yes|QMessageBox::No);
     if (reply == QMessageBox::Yes)
     {
-        int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
-        int top_id = ui->tableAgenda->model()->index(selectedRow, 0).data().toInt();
+      int selectedRow = ui->tableAgenda->selectionModel()->selection().indexes().value(0).row();
+      int top_id = ui->tableAgenda->model()->index(selectedRow, 0).data().toInt();
 
-        QSqlQuery query (*Database::getInstance()->getDatabase());
+      QSqlDatabase* db = Database::getInstance()->getDatabase();
+
+      if (0 != db)
+      {
+        db->open();
+
+        QSqlQuery query (*db);
+
+        query.clear ();
         query.prepare("DELETE FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :topid");
-
         query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
         query.bindValue(":year", Database::getInstance()->getCurrentYear());
         query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
@@ -917,6 +975,7 @@ void ReportGeneratorTab::on_deleteEntry_clicked()
         query.exec();
 
         //update top ids
+        query.clear ();
         query.prepare("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id > :topid");
         query.bindValue(":topid", top_id);
         query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -928,24 +987,28 @@ void ReportGeneratorTab::on_deleteEntry_clicked()
         int new_Id = 0;
         while (query.next ())
         {
-            old_Id = query.value(0).toInt();
-            new_Id = old_Id - 1;
+          old_Id = query.value(0).toInt();
+          new_Id = old_Id - 1;
 
-            query.prepare("UPDATE Beschluesse SET top_id = :newid WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :oldid");
-            query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-            query.bindValue(":year", Database::getInstance()->getCurrentYear());
-            query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-            query.bindValue(":oldid", old_Id);
-            query.bindValue(":newid", new_Id);
-            query.exec();
+          query.clear ();
+          query.prepare("UPDATE Beschluesse SET top_id = :newid WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :oldid");
+          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+          query.bindValue(":year", Database::getInstance()->getCurrentYear());
+          query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+          query.bindValue(":oldid", old_Id);
+          query.bindValue(":newid", new_Id);
+          query.exec();
 
-            query.prepare("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id > :topid");
-            query.bindValue(":topid", new_Id);
-            query.exec();
+          query.clear ();
+          query.prepare("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id > :topid");
+          query.bindValue(":topid", new_Id);
+          query.exec();
         }
+        db->close();
+      }
 
-        updateAgendaTable();
-        ui->tableAgenda->selectRow(selectedRow);
+      updateAgendaTable();
+      ui->tableAgenda->selectRow(selectedRow);
     }
   }
   else
@@ -957,6 +1020,7 @@ void ReportGeneratorTab::on_addDecission_clicked()
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
+    db->open();
     DecissionItemSettings itemSettings (this);
     itemSettings.setHeader (QString("Schriftlicher Beschluss"));
     itemSettings.setType(1);
@@ -968,44 +1032,43 @@ void ReportGeneratorTab::on_addDecission_clicked()
     }
     else
     {
-      if (Database::getInstance()->dbIsOk())
+      //get highest id
+      QSqlQuery query (*db);
+      query.prepare ("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum ORDER BY top_id DESC");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
+      query.exec();
+
+      int maxIndex = -1;
+
+      if (query.next())
+        maxIndex = query.value(0).toInt();
+
+      if (-1 != maxIndex)
       {
-        //get highest id
-        QSqlQuery query (*Database::getInstance()->getDatabase());
-        query.prepare ("SELECT top_id FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvNum ORDER BY top_id DESC");
+        query.clear();
+        query.prepare("INSERT INTO Beschluesse (obj_id, wi_jahr, etv_nr, top_id, protokoll_id, header, descr, beschlussformulierung, abstimmergebnis, beschlusssammlungVermerke, stimmenJa, stimmenNein, stimmenEnthaltung, beschlussArt) VALUES (:id, :year, :etvNum, :topid, :protokollid, :headerText, :description, :formulierung, :abstimmergebnis, :vermerke, :ja, :nein, :enthaltung, :beschlussArt)");
         query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
         query.bindValue(":year", Database::getInstance()->getCurrentYear());
         query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
-        query.exec();
+        query.bindValue(":headerText", itemSettings.getHeader());
+        query.bindValue(":description", itemSettings.getDescription());
+        query.bindValue(":topid", maxIndex+1);
+        query.bindValue(":protokollid", maxIndex+1);
+        query.bindValue(":formulierung", itemSettings.getDecissionText());
+        query.bindValue(":abstimmergebnis", itemSettings.getDecissionProclamation());
+        query.bindValue(":ja", itemSettings.getYesVotes());
+        query.bindValue(":nein", itemSettings.getNoVotes());
+        query.bindValue(":enthaltung", itemSettings.getAbsentionVotes());
+        query.bindValue(":vermerke", itemSettings.getDecissionProclamation());
+        query.bindValue(":beschlussArt", 1);
 
-        int maxIndex = -1;
+        query.exec ();
 
-        if (query.next())
-          maxIndex = query.value(0).toInt();
-
-        if (-1 != maxIndex)
-        {
-          query.prepare("INSERT INTO Beschluesse (obj_id, wi_jahr, etv_nr, top_id, protokoll_id, header, descr, beschlussformulierung, abstimmergebnis, beschlusssammlungVermerke, stimmenJa, stimmenNein, stimmenEnthaltung, beschlussArt) VALUES (:id, :year, :etvNum, :topid, :protokollid, :headerText, :description, :formulierung, :abstimmergebnis, :vermerke, :ja, :nein, :enthaltung, :beschlussArt)");
-          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query.bindValue(":year", Database::getInstance()->getCurrentYear());
-          query.bindValue(":etvNum", Database::getInstance()->getCurrentEtvNumber());
-          query.bindValue(":headerText", itemSettings.getHeader());
-          query.bindValue(":description", itemSettings.getDescription());
-          query.bindValue(":topid", maxIndex+1);
-          query.bindValue(":protokollid", maxIndex+1);
-          query.bindValue(":formulierung", itemSettings.getDecissionText());
-          query.bindValue(":abstimmergebnis", itemSettings.getDecissionProclamation());
-          query.bindValue(":ja", itemSettings.getYesVotes());
-          query.bindValue(":nein", itemSettings.getNoVotes());
-          query.bindValue(":enthaltung", itemSettings.getAbsentionVotes());
-          query.bindValue(":vermerke", itemSettings.getDecissionProclamation());
-          query.bindValue(":beschlussArt", 1);
-
-          query.exec ();
-
-          updateAgendaTable();
-        }
+        updateAgendaTable();
       }
     }
+    db->close();
   }
 }

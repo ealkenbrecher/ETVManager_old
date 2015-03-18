@@ -29,6 +29,7 @@ private:
     QString generateReportTemplateAsPdf (const QString &rFilePath);
     QString generateReportTranscriptAsPdf (const QString &rFilePath);
     QString generateDecissionLibraryAsPdf (const QString &rFilePath);
+    //helpers
     QString replaceCoverPageTagsByUnderscore (QString in);
     Ui::GeneratorTab *ui;
 };

@@ -49,30 +49,6 @@ ResultId VotingDialog::getResult ()
     value = eUndef;
 
   return value;
-
-/*  else
-  {
-    QSqlQuery query (*Database::getInstance()->getDatabase());
-
-    //get data
-    query.prepare("SELECT * FROM VotingTexts");
-    query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-    query.exec();
-
-    while (query.next())
-    {
-      if (ui->voteMajorityAccepted->isChecked ())
-        value = query.value(eMehrheitlichAngenommen).toString();
-      if (ui->voteMajorityAll->isChecked ())
-        value = query.value(eAllstimmigAngenommen).toString();
-      if (ui->voteMajorityConcordant->isChecked ())
-        value = query.value(eEinstimmigAngenommen).toString();
-      if (ui->voteMajorityRejected->isChecked ())
-        value = query.value(eMehrheitlichAbgelehnt).toString();
-      if (ui->voteNoVote->isChecked ())
-        value = query.value(eKeinBeschluss).toString();
-      }
-  }*/
 }
 
 QString VotingDialog::getResultManualEdit ()

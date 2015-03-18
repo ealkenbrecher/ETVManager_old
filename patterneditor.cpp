@@ -18,27 +18,27 @@ PatternEditor::PatternEditor(QWidget *parent) :
 
 void PatternEditor::updatePatternTable ()
 {
-    QSqlDatabase* db = Database::getInstance()->getDatabase();
+  QSqlDatabase* db = Database::getInstance()->getDatabase();
 
-    if (0 != db)
-    {
-        if (Database::getInstance()->dbIsOk ())
-        {
-          QSqlQuery query (*db);
-          query.prepare("SELECT id, bezeichnung FROM AgendaPatterns ORDER BY bezeichnung ASC");
-          query.exec();
+  if (0 != db)
+  {
+    db->open();
+    QSqlQuery query (*db);
+    query.prepare("SELECT id, bezeichnung FROM AgendaPatterns ORDER BY bezeichnung ASC");
+    query.exec();
 
-          mQueryModel = new QSqlQueryModelRichtext ();
-          mQueryModel->setQuery(query);
-          mQueryModel->setHeaderData(0, Qt::Horizontal, tr("Bezeichnung"));
+    mQueryModel = new QSqlQueryModelRichtext ();
+    mQueryModel->setQuery(query);
+    mQueryModel->setHeaderData(0, Qt::Horizontal, tr("Bezeichnung"));
 
-          ui->tablePatterns->setModel(mQueryModel);
-          ui->tablePatterns->horizontalHeader()->resizeSection(0, 50);
-          // do not show id, is only necessary for internal use
-          ui->tablePatterns->hideColumn(0);
-          ui->tablePatterns->show();
-        }
-    }
+    ui->tablePatterns->setModel(mQueryModel);
+    ui->tablePatterns->horizontalHeader()->resizeSection(0, 50);
+    // do not show id, is only necessary for internal use
+    ui->tablePatterns->hideColumn(0);
+    ui->tablePatterns->show();
+
+    db->close();
+  }
 }
 
 PatternEditor::~PatternEditor()
@@ -88,6 +88,7 @@ void PatternEditor::changePatternItemSettings (int aId)
 
   PatternItemSettings itemSettings (this);
 
+  Database::getInstance()->getDatabase()->open();
   QSqlQuery query (*Database::getInstance()->getDatabase());
   query.prepare("SELECT bezeichnung, ueberschrift, beschreibung, beschlussvorschlag, beschlussvorschlag2, beschlussvorschlag3, LeerzeilenProtokoll, beschlussArt FROM AgendaPatterns WHERE id = :id");
 
@@ -105,6 +106,7 @@ void PatternEditor::changePatternItemSettings (int aId)
     itemSettings.setNumberOfLines(query.value(6).toInt());
     itemSettings.setType(query.value(7).toInt());
   }
+  Database::getInstance()->getDatabase()->close();
 
   //abort -> do not save settings
   if (itemSettings.exec() != QDialog::Accepted)
@@ -115,6 +117,7 @@ void PatternEditor::changePatternItemSettings (int aId)
   {
     if (Database::getInstance()->dbIsOk())
     {
+        Database::getInstance()->getDatabase()->open();
         QSqlQuery query (*Database::getInstance()->getDatabase());
         //set values
         query.prepare("UPDATE AgendaPatterns SET bezeichnung = :patternName, ueberschrift =:header, beschreibung =:descr, beschlussvorschlag =:suggestion, beschlussvorschlag2 =:suggestion2, beschlussvorschlag3 =:suggestion3, LeerzeilenProtokoll =:numberOfLines, beschlussArt =:type WHERE id = :id");
@@ -128,6 +131,7 @@ void PatternEditor::changePatternItemSettings (int aId)
         query.bindValue(":numberOfLines", itemSettings.getNumberOfLines());
         query.bindValue(":type", itemSettings.getType());
         query.exec();
+        Database::getInstance()->getDatabase()->close();
 
         updatePatternTable();
         ui->tablePatterns->selectRow(selectedRow);
@@ -149,6 +153,7 @@ void PatternEditor::on_addEntry_clicked()
   {
     if (Database::getInstance()->dbIsOk())
     {
+        Database::getInstance()->getDatabase()->open();
         QSqlQuery query (*Database::getInstance()->getDatabase());
         //set values
         query.prepare("INSERT INTO AgendaPatterns (ueberschrift, beschreibung, beschlussvorschlag, beschlussvorschlag2, beschlussvorschlag3, LeerzeilenProtokoll, bezeichnung, beschlussArt) VALUES (:header, :descr, :suggestion,:suggestion2, :suggestion3, :lines, :patternName, :type)");
@@ -161,6 +166,7 @@ void PatternEditor::on_addEntry_clicked()
         query.bindValue(":lines", itemSettings.getNumberOfLines());
         query.bindValue(":patternName", itemSettings.getPatternName());
         query.exec();
+        Database::getInstance()->getDatabase()->close();
 
         updatePatternTable();
     }
@@ -177,10 +183,12 @@ void PatternEditor::on_deleteEntry_clicked()
       int selectedRow = ui->tablePatterns->selectionModel()->selection().indexes().value(0).row();
       int id = ui->tablePatterns->model()->index(selectedRow,0).data().toInt();
 
+      Database::getInstance()->getDatabase()->open();
       QSqlQuery query (*Database::getInstance()->getDatabase());
       query.prepare("DELETE FROM AgendaPatterns WHERE id = :id");
       query.bindValue(":id", id);
       query.exec();
+      Database::getInstance()->getDatabase()->close();
 
       updatePatternTable();
     }

@@ -17,6 +17,8 @@ QSqlQuery DatabaseDecissionTableImpl::getSelectQuery (QString aArg)
       QString request ("SELECT ");
       request.append(aArg);
       request.append(" FROM Beschluesse WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
+
+      Database::getInstance()->getDatabase()->open();
       QSqlQuery query (*mDatabaseclass->getDatabase());
 
       query.prepare(request);
@@ -24,6 +26,7 @@ QSqlQuery DatabaseDecissionTableImpl::getSelectQuery (QString aArg)
       query.bindValue(":year", mDatabaseclass->getCurrentYear());
       query.bindValue(":etvnr", mDatabaseclass->getCurrentEtvNumber());
       query.exec();
+      Database::getInstance()->getDatabase()->close();
     }
   }
   QSqlQuery noResult;

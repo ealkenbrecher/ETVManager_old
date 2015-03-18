@@ -155,14 +155,18 @@ QSqlError mainView::addConnection(const QString &driver, const QString &dbName, 
     db.setDatabaseName(dbName);
     db.setHostName(host);
     db.setPort(port);
+
+    //test db
     if (!db.open(user, passwd))
     {
         err = db.lastError();
         db = QSqlDatabase();
         QSqlDatabase::removeDatabase(QString("Browser%1").arg(cCount));
-    }
-    //connectionWidget->refresh();
 
+        return err;
+    }
+
+    db.close();
     Database::getInstance()->setDatabase(&db);
 
     return err;
@@ -215,6 +219,7 @@ void mainView::addProperty()
   {
     if (Database::getInstance()->dbIsOk())
     {
+      Database::getInstance()->getDatabase()->open();
       QSqlQuery query (*Database::getInstance()->getDatabase());
       //set values
       query.prepare("INSERT INTO Objekt (obj_name, obj_mea, obj_stimmrecht, obj_anz_et, obj_inv_deadline) VALUES (:name, :mea, :stimmrecht, :anz_et, :deadline)");
@@ -224,6 +229,7 @@ void mainView::addProperty()
       query.bindValue(":anz_et", QString::number(dialog.ownerQuantity()));
       query.bindValue(":deadline", dialog.getInvitationDeadline());
       query.exec();
+      Database::getInstance()->getDatabase()->close();
 
       if (0 != mPropertyTab)
       {

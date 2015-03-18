@@ -26,6 +26,22 @@ Database* Database::getInstance()
     return &theInstance;
 }
 
+void Database::execQuery (QSqlQuery* query)
+{
+  if (0 != query)
+  {
+    if (0 != mDb)
+    {
+      if (!mDb->isOpen())
+      {
+        mDb->open();
+      }
+      query->exec();
+      mDb->close();
+    }
+  }
+}
+
 void Database::setDatabase (QSqlDatabase* pDb)
 {
     mDb = pDb;
@@ -43,7 +59,7 @@ QSqlDatabase* Database::getDatabase ()
   if (dbIsOk())
   {
     QSqlQuery query (*mDb);
-    query.prepare("SELECT Text FROM TextPatterns WHERE id = :id");
+    Database::getInstance()->getDatabase()->open(); query.prepare("SELECT Text FROM TextPatterns WHERE id = :id");
     query.bindValue(":id", (int)aId);
     query.exec();
 
@@ -59,10 +75,7 @@ bool Database::dbIsOk()
   {
     if (mDb->isValid())
     {
-        if (mDb->isOpen())
-        {
-            return true;
-        }
+      return true;
     }
   }
   return false;

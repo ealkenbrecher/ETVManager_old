@@ -67,6 +67,7 @@ void OrderTab::updateAgendaTable ()
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
+    Database::getInstance()->getDatabase()->open();
     QSqlQuery query (*db);
     query.prepare("SELECT top_id, top_header, LeerzeilenProtokoll FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -83,6 +84,8 @@ void OrderTab::updateAgendaTable ()
     ui->tableAgenda->setModel(mQueryModel);
     ui->tableAgenda->horizontalHeader()->resizeSection(0, 50);
     ui->tableAgenda->show();
+
+    db->close();
   }
 }
 
@@ -91,6 +94,7 @@ void OrderTab::updateReportTemplateTable ()
   QSqlDatabase* db = Database::getInstance()->getDatabase();
   if (0 != db)
   {
+      db->open();
       QSqlQuery query (*db);
       query.prepare("SELECT Protokollueberschrift FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
       query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -104,6 +108,7 @@ void OrderTab::updateReportTemplateTable ()
 
       ui->tableReportTemplate->setModel(mQueryModelReportTemplate);
       ui->tableReportTemplate->show();
+      db->close();
   }
 }
 
@@ -124,6 +129,7 @@ void OrderTab::changeAgendaItemSettings (int aId)
 
   if (0 != db)
   {
+    db->open();
     QSqlQuery query (*db);
     query.prepare("SELECT LeerzeilenProtokoll FROM Tagesordnungspunkte WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr AND top_id = :top_id");
     query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -131,6 +137,7 @@ void OrderTab::changeAgendaItemSettings (int aId)
     query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
     query.bindValue(":top_id", aId);
     query.exec();
+    db->close();
 
     while (query.next())
     {
@@ -147,6 +154,7 @@ void OrderTab::changeAgendaItemSettings (int aId)
   {
     if (Database::getInstance()->dbIsOk())
     {
+      Database::getInstance()->getDatabase()->open();
       QSqlQuery query (*Database::getInstance()->getDatabase());
       //set values
       query.prepare("UPDATE Tagesordnungspunkte SET LeerzeilenProtokoll =:lines WHERE obj_id = :id AND wi_jahr = :year AND top_id = :topid AND etv_nr = :etvnum");
@@ -156,6 +164,7 @@ void OrderTab::changeAgendaItemSettings (int aId)
       query.bindValue(":topid", aId);
       query.bindValue(":lines", itemSettings.getValue());
       query.exec();
+      Database::getInstance()->getDatabase()->close();
 
       updateAgendaTable();
       ui->tableAgenda->setFocus();
@@ -170,6 +179,7 @@ void OrderTab::on_tableReportTemplate_doubleClicked(const QModelIndex &index)
 
   PatternEditorReportItemSettings itemSettings (this);
 
+  Database::getInstance()->getDatabase()->open();
   QSqlQuery query (*Database::getInstance()->getDatabase());
   query.prepare("SELECT Protokollueberschrift, Protokollvorlage FROM Eigentuemerversammlungen WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
   query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
@@ -183,8 +193,7 @@ void OrderTab::on_tableReportTemplate_doubleClicked(const QModelIndex &index)
     itemSettings.setBodyText(query.value(1).toString());
   }
 
-  /*qDebug () << "query.value(0).toString()" << query.value(0).toString();
-  qDebug () << "query.value(1).toString()" << query.value(1).toString();*/
+  Database::getInstance()->getDatabase()->close();
 
   //abort -> do not save settings
   if (itemSettings.exec() != QDialog::Accepted)
@@ -193,19 +202,21 @@ void OrderTab::on_tableReportTemplate_doubleClicked(const QModelIndex &index)
   }
   else
   {
-      if (Database::getInstance()->dbIsOk())
-      {
-          QSqlQuery query (*Database::getInstance()->getDatabase());
-          //set values
-          query.prepare("UPDATE Eigentuemerversammlungen SET Protokollvorlage =:newBodyText WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
-          query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
-          query.bindValue(":year", Database::getInstance()->getCurrentYear());
-          query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
-          query.bindValue(":newBodyText", itemSettings.getBodyText());
-          query.exec();
+    if (Database::getInstance()->dbIsOk())
+    {
+      Database::getInstance()->getDatabase()->open();
+      QSqlQuery query (*Database::getInstance()->getDatabase());
+      //set values
+      query.prepare("UPDATE Eigentuemerversammlungen SET Protokollvorlage =:newBodyText WHERE obj_id = :id AND wi_jahr = :year AND etv_nr = :etvnr");
+      query.bindValue(":id", Database::getInstance()->getCurrentPropertyId());
+      query.bindValue(":year", Database::getInstance()->getCurrentYear());
+      query.bindValue(":etvnr", Database::getInstance()->getCurrentEtvNumber());
+      query.bindValue(":newBodyText", itemSettings.getBodyText());
+      query.exec();
+      Database::getInstance()->getDatabase()->close();
 
-          //updateReportTemplateTable();
-      }
+      //updateReportTemplateTable();
+    }
   }
 }
 

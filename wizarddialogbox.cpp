@@ -10,7 +10,6 @@
 #include <QCheckBox>
 #include <QRadioButton>
 #include <QDoubleSpinBox>
-#include "database.h"
 #include "stringreplacer.h"
 
 WizardDialogBox::WizardDialogBox(QWidget *parent) :
